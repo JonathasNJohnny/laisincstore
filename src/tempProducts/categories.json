@@ -1,0 +1,14 @@
+[
+  {
+    "value": 1,
+    "label": "Personagens",
+    "description": "Produtos inspirados em personagens de filmes, séries e jogos, incluindo chaveiros, miniaturas e outros itens colecionáveis.",
+    "image": "src\\tempProducts\\imgs\\product1.jpeg"
+  },
+  {
+    "value": 2,
+    "label": "Acessórios",
+    "description": "Acessórios feitos à mão, incluindo marca páginas, chaveiros e outros itens artesanais.",
+    "image": "src\\tempProducts\\imgs\\product1.jpeg"
+  }
+]
