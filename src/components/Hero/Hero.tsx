@@ -22,7 +22,7 @@ export function Hero({
   subtitle = "Descubra produtos criativos, delicados e feitos para deixar seus momentos ainda mais especiais.",
   primaryAction = { label: "Conhecer a loja", href: "/loja" },
   secondaryAction = { label: "Ver novidades", href: "/loja?sort=newest" },
-  image = "/images/hero/hero-main.jpg",
+  // image = "/images/hero/hero-main.jpg",
   className = "",
 }: HeroProps) {
   return (

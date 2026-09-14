@@ -2,7 +2,7 @@ import { Hero } from "../../components/Hero/Hero";
 import { SectionTitle } from "../../components/SectionTitle/SectionTitle";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
-import { Newsletter } from "../../components/Newsletter/Newsletter";
+// import { Newsletter } from "../../components/Newsletter/Newsletter";
 import { products } from "../../data/products";
 import { categories } from "../../data/categories";
 
