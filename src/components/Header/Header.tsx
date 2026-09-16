@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Search, ShoppingBag, User, Heart } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { SocialLinks } from "../SocialLinks/SocialLinks";
 import { SearchBar } from "../SearchBar/SearchBar";
 import { CartDrawer } from "../CartDrawer/CartDrawer";
 import { useCart } from "../../contexts/CartContext";
+import { useAuth } from "../../contexts/AuthContext";
 import type { NavItem } from "../../types";
 import logo from "../../assets/logo.png";
 
@@ -52,8 +53,14 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const location = useLocation();
   const { getItemCount, toggleCart } = useCart();
+  const { user, login, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,9 +73,28 @@ export function Header() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsSearchOpen(false);
+    setIsAccountOpen(false);
   }, [location]);
 
   const itemCount = getItemCount();
+  const visibleNavItems = user?.admin === true
+    ? [...navItems.slice(0, 2), { label: "Administrar", href: "/administrar" }, ...navItems.slice(2)]
+    : navItems;
+  const profileIncomplete = Boolean(
+    user &&
+      (["telefone", "cep", "bairro", "rua", "numero", "recebedor"].some(
+        (field) => !user[field as keyof typeof user],
+      ) ||
+        (!user.cpf && !user.cnpj)),
+  );
+
+  async function handleLogin(event: React.FormEvent) {
+    event.preventDefault();
+    setLoginError(""); setIsLoggingIn(true);
+    try { await login(email, password); setIsAccountOpen(false); setPassword(""); }
+    catch (error) { setLoginError(error instanceof Error ? error.message : "Não foi possível entrar."); }
+    finally { setIsLoggingIn(false); }
+  }
 
   return (
     <>
@@ -99,7 +125,7 @@ export function Header() {
               aria-label="Navegação principal"
             >
               <ul className="flex items-center gap-1" role="list">
-                {navItems.map((item) => (
+                {visibleNavItems.map((item) => (
                   <li key={item.href}>
                     <Link
                       to={item.href}
@@ -124,10 +150,12 @@ export function Header() {
               <SearchBar variant="header" placeholder="O que você procura?" />
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="relative flex items-center gap-2 shrink-0">
               <button
+                onClick={() => setIsAccountOpen((open) => !open)}
                 className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors lg:p-2.5"
                 aria-label="Minha conta"
+                aria-expanded={isAccountOpen}
               >
                 <User className="w-5 h-5 lg:w-6 lg:h-6" aria-hidden="true" />
               </button>
@@ -152,6 +180,24 @@ export function Header() {
                   </span>
                 )}
               </button>
+              {isAccountOpen && (
+                <div className="absolute right-0 top-full z-[60] mt-3 w-[min(22rem,calc(100vw-2rem))] animate-[slideUp_180ms_ease-out] rounded-2xl border border-cinza-quente bg-branco p-5 shadow-xl">
+                  {user ? <>
+                    <p className="font-semibold text-roxo-profundo">{user.nome}</p>
+                    <p className="mb-4 text-sm text-cinza-amarronzado">{user.email}</p>
+                    {profileIncomplete && <Link to="/perfil" className="mb-2 block rounded-xl bg-dourado-suave/25 px-4 py-3 text-sm font-medium text-roxo-profundo">⚠️ Continuar cadastro</Link>}
+                    <Link to="/perfil" className="mb-2 block rounded-xl px-4 py-3 text-sm font-medium text-grafite-arroxeado hover:bg-cinza-quente/50">Meu perfil / Editar dados</Link>
+                    <button onClick={logout} className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50"><LogOut className="h-4 w-4" />Sair</button>
+                  </> : <form onSubmit={handleLogin} className="space-y-3">
+                    <h2 className="font-serif text-xl font-bold text-roxo-profundo">Entrar</h2>
+                    <label className="grid gap-1 text-sm">E-mail<input className="rounded-xl border border-cinza-quente px-3 py-2" type="email" value={email} required onChange={(event) => setEmail(event.target.value)} /></label>
+                    <label className="grid gap-1 text-sm">Senha<input className="rounded-xl border border-cinza-quente px-3 py-2" type="password" value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
+                    {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+                    <button disabled={isLoggingIn} className="w-full rounded-xl bg-rosa-lais px-4 py-2.5 font-medium text-branco disabled:opacity-50">{isLoggingIn ? "Entrando..." : "Entrar"}</button>
+                    <p className="text-center text-sm text-cinza-amarronzado">Ainda não tem conta? <Link className="font-medium text-rosa-lais" to="/cadastro">Cadastre-se</Link></p>
+                  </form>}
+                </div>
+              )}
             </div>
 
             <div className="lg:hidden flex items-center gap-2">
@@ -205,7 +251,7 @@ export function Header() {
             aria-label="Menu mobile"
           >
             <div className="py-4 space-y-1">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}

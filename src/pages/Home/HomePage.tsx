@@ -1,15 +1,66 @@
+import { useEffect, useMemo, useState } from "react";
 import { Hero } from "../../components/Hero/Hero";
 import { SectionTitle } from "../../components/SectionTitle/SectionTitle";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
+import { loadProducts } from "../../components/ProductList/ProductList";
 // import { Newsletter } from "../../components/Newsletter/Newsletter";
-import { products } from "../../data/products";
-import { categories } from "../../data/categories";
+import { slugify } from "../../utils/slugify";
+import type { Category } from "../../types";
+import type { Product } from "../../types";
 
 export function HomePage() {
-  const newProducts = products;
-  const featuredProducts = products;
-  const saleProducts = products;
+  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchProducts() {
+      try {
+        const data = await loadProducts();
+        if (!active) return;
+        setLiveProducts(data);
+      } catch {
+        if (!active) return;
+        setLiveProducts([]);
+      } finally {
+        if (active) {
+          setLoadingProducts(false);
+        }
+      }
+    }
+
+    fetchProducts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categories = useMemo<Category[]>(() => {
+    const categoryMap = new Map<string, Product[]>();
+
+    liveProducts.forEach((product) => {
+      const categoryProducts = categoryMap.get(product.category) ?? [];
+      categoryProducts.push(product);
+      categoryMap.set(product.category, categoryProducts);
+    });
+
+    return Array.from(categoryMap.entries()).map(([name, categoryProducts]) => {
+      const randomProduct =
+        categoryProducts[Math.floor(Math.random() * categoryProducts.length)];
+
+      return {
+        id: slugify(name),
+        slug: slugify(name),
+        name,
+        description: `Produtos selecionados da categoria ${name}.`,
+        image: randomProduct.image,
+        productCount: categoryProducts.length,
+      };
+    });
+  }, [liveProducts]);
 
   return (
     <>
@@ -37,6 +88,23 @@ export function HomePage() {
 
       <section
         className="container py-12 lg:py-16"
+        aria-labelledby="api-products-title"
+      >
+        <SectionTitle
+          title="Produtos da Loja"
+          subtitle="Atualizados diretamente da API da Laís Inc"
+          action={{ label: "Ver loja completa", href: "/loja" }}
+        />
+        <ProductGrid
+          products={liveProducts.slice(0, 8)}
+          loading={loadingProducts}
+          onAddToCart={() => {}}
+          emptyMessage="Nenhum produto disponível no momento"
+        />
+      </section>
+
+      <section
+        className="container py-12 lg:py-16"
         aria-labelledby="new-products-title"
       >
         <SectionTitle
@@ -46,9 +114,10 @@ export function HomePage() {
           action={{ label: "Ver todas novidades", href: "/loja?badge=Novo" }}
         />
         <ProductGrid
-          products={newProducts.slice(0, 8)}
-          loading={false}
+          products={liveProducts.slice(0, 8)}
+          loading={loadingProducts}
           onAddToCart={() => {}}
+          emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
 
@@ -66,9 +135,10 @@ export function HomePage() {
           }}
         />
         <ProductGrid
-          products={featuredProducts.slice(0, 8)}
-          loading={false}
+          products={liveProducts.slice(0, 8)}
+          loading={loadingProducts}
           onAddToCart={() => {}}
+          emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
 
@@ -83,9 +153,10 @@ export function HomePage() {
           action={{ label: "Ver todas ofertas", href: "/loja?badge=Oferta" }}
         />
         <ProductGrid
-          products={saleProducts.slice(0, 8)}
-          loading={false}
+          products={liveProducts.slice(0, 8)}
+          loading={loadingProducts}
           onAddToCart={() => {}}
+          emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
 

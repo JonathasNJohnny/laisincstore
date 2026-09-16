@@ -13,6 +13,9 @@ import { ContactPage } from "../pages/Contact/ContactPage";
 import { PrivacyPage } from "../pages/Privacy/PrivacyPage";
 import { TermsPage } from "../pages/Terms/TermsPage";
 import { ThanksPage } from "../pages/Thanks/ThanksPage";
+import { AdminPage } from "../pages/Admin/AdminPage";
+import { RegisterPage } from "../pages/Register/RegisterPage";
+import { ProfilePage } from "../pages/Profile/ProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +25,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: "loja", element: <ShopPage /> },
+      { path: "administrar", element: <AdminPage /> },
+      { path: "cadastro", element: <RegisterPage /> },
+      { path: "perfil", element: <ProfilePage /> },
       { path: "produto/:slug", element: <ProductPage /> },
       { path: "categoria/:slug", element: <CategoryPage /> },
       { path: "carrinho", element: <CartPage /> },

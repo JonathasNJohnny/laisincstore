@@ -1,15 +1,47 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
-import { getCategoryBySlug, getProductsByCategory } from "../../data/products";
+import { loadProducts } from "../../components/ProductList/ProductList";
+import { slugify } from "../../utils/slugify";
+import type { Product } from "../../types";
 
 export function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
-  const category = getCategoryBySlug(slug || "");
-  const products = useMemo(
-    () => getProductsByCategory(category?.name || ""),
-    [category],
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    loadProducts()
+      .then((result) => {
+        if (active) setApiProducts(result);
+      })
+      .catch(() => {
+        if (active) setApiProducts([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categoryProducts = useMemo(
+    () => apiProducts.filter((product) => slugify(product.category) === slug),
+    [apiProducts, slug],
   );
+  const category = categoryProducts[0]?.category;
+
+  if (loading) {
+    return (
+      <section className="container py-32 text-center">
+        <p className="text-cinza-amarronzado">Carregando categoria...</p>
+      </section>
+    );
+  }
 
   if (!category) {
     return (
@@ -39,10 +71,10 @@ export function CategoryPage() {
               Categoria
             </p>
             <h1 className="font-serif text-3xl lg:text-4xl font-bold text-roxo-profundo mb-4">
-              {category.name}
+              {category}
             </h1>
             <p className="text-cinza-amarronzado text-lg">
-              {category.description}
+              Produtos cadastrados na categoria {category}.
             </p>
           </div>
         </div>
@@ -50,11 +82,11 @@ export function CategoryPage() {
 
       <section className="container py-8 lg:py-12">
         <ProductGrid
-          products={products}
+          products={categoryProducts}
           variant="default"
           loading={false}
           onAddToCart={() => {}}
-          emptyMessage={`Nenhum produto encontrado na categoria ${category.name}`}
+          emptyMessage={`Nenhum produto encontrado na categoria ${category}`}
         />
       </section>
     </div>

@@ -22,6 +22,7 @@ export function CategoryCard({
         <img
           src={category.image}
           alt=""
+          crossOrigin="anonymous"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />

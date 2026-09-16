@@ -48,6 +48,7 @@ export function ProductCard({
             <img
               src={product.image}
               alt=""
+              crossOrigin="anonymous"
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
@@ -103,6 +104,7 @@ export function ProductCard({
           <img
             src={product.image}
             alt={product.name}
+            crossOrigin="anonymous"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
