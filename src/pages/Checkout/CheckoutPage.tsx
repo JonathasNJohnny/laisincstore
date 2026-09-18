@@ -24,19 +24,9 @@ import {
 } from "../../services/api";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
 
-const CHECKOUT_STORAGE_KEY = "laisinc-checkout-order";
 const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
 
 if (mercadoPagoPublicKey) initMercadoPago(mercadoPagoPublicKey);
-
-function loadSavedCheckout(): { order: Order | null; pixPayment: PixPayment | null } {
-  try {
-    const saved = JSON.parse(localStorage.getItem(CHECKOUT_STORAGE_KEY) ?? "null");
-    return { order: saved?.order ?? null, pixPayment: saved?.pixPayment ?? null };
-  } catch {
-    return { order: null, pixPayment: null };
-  }
-}
 
 const shippingOptions = [
   {
@@ -80,13 +70,13 @@ const paymentMethods = [
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user } = useAuth();
-  const [step, setStep] = useState(() => loadSavedCheckout().order ? 4 : 1);
+  const [step, setStep] = useState(1);
   const [shipping, setShipping] = useState(shippingOptions[0].id);
   const [payment, setPayment] = useState("pix");
   const [paymentError, setPaymentError] = useState("");
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
-  const [order, setOrder] = useState<Order | null>(() => loadSavedCheckout().order);
-  const [pixPayment, setPixPayment] = useState<PixPayment | null>(() => loadSavedCheckout().pixPayment);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -111,17 +101,11 @@ export function CheckoutPage() {
   }, [formData.email, user?.email]);
 
   useEffect(() => {
-    if (!order) return;
-    localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify({ order, pixPayment }));
-  }, [order, pixPayment]);
-
-  useEffect(() => {
     if (!order || order.status !== "pending_payment") return;
     const refreshOrder = async () => {
       try {
         const response = await getOrder(order.id);
         setOrder(response.order);
-        if (response.order.status !== "pending_payment") localStorage.removeItem(CHECKOUT_STORAGE_KEY);
       } catch {
         // MantÃ©m o PIX visÃ­vel e tenta novamente no prÃ³ximo intervalo.
       }

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode } from "react";
 import type { CartContextType, CartItem, Product } from "../types";
 import { useAuth } from "./AuthContext";
-import { addCartItem, getCart, getProducts, removeCartItem, updateCartItem } from "../services/api";
+import { addCartItem, getCart, removeCartItem, updateCartItem } from "../services/api";
 import { AUTH_TOKEN_KEY } from "../services/users";
 import { slugify } from "../utils/slugify";
 
@@ -43,36 +43,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>(restoreStoredCart);
   const [isOpen, setIsOpen] = useState(false);
-  const hasAuthenticatedSession = Boolean(user || localStorage.getItem(AUTH_TOKEN_KEY));
+  const sessionToken = localStorage.getItem(AUTH_TOKEN_KEY);
+  const hasAuthenticatedSession = Boolean(sessionToken);
   const migratedTokenRef = useRef<string | null>(null);
+  const pendingLocalItemsRef = useRef(items);
+  const knownProductsRef = useRef(new Map<string, Product>(items.map((item) => [item.product.id, item.product])));
 
   const refreshCart = useCallback(async () => {
     if (!localStorage.getItem(AUTH_TOKEN_KEY)) return;
-    const [{ cart }, apiProducts] = await Promise.all([getCart(), getProducts().catch(() => [])]);
-    const products: Product[] = apiProducts.map((product) => ({
-      id: String(product.id), slug: product.slug ?? slugify(product.name), name: product.name,
-      category: product.category ?? "Produto", description: product.description ?? "",
-      price: Math.round(Number(product.price) * 100), image: product.image_url ?? "/imagem-padrao.png",
-      stock: Number(product.stock ?? 0),
-    }));
+    const { cart } = await getCart();
+    const products = Array.from(knownProductsRef.current.values());
     setItems(cart.items.map((item) => ({ product: makeCartProduct(item, products), quantity: Number(item.quantity) })));
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!hasAuthenticatedSession || !token) return;
+    if (!hasAuthenticatedSession || !sessionToken) return;
 
     const synchronizeCart = async () => {
-      if (migratedTokenRef.current === token) {
-        await refreshCart();
-        return;
-      }
+      if (migratedTokenRef.current === sessionToken) return;
       // Marca antes das chamadas assíncronas para evitar duplicação no StrictMode.
-      migratedTokenRef.current = token;
+      migratedTokenRef.current = sessionToken;
       const { cart } = await getCart();
       // Migra uma cesta local antiga apenas quando o carrinho do usuário ainda está vazio.
-      if (cart.items.length === 0 && items.length > 0) {
-        await Promise.all(items.map((item) => addCartItem(toApiProductId(item.product.id), item.quantity)));
+      if (cart.items.length === 0 && pendingLocalItemsRef.current.length > 0) {
+        await Promise.all(pendingLocalItemsRef.current.map((item) => addCartItem(toApiProductId(item.product.id), item.quantity)));
       }
       await refreshCart();
     };
@@ -81,7 +75,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       migratedTokenRef.current = null;
       console.error("Não foi possível carregar o carrinho:", error);
     });
-  }, [hasAuthenticatedSession, items, refreshCart]);
+  }, [hasAuthenticatedSession, refreshCart, sessionToken, user]);
+
+  useEffect(() => {
+    if (!hasAuthenticatedSession) pendingLocalItemsRef.current = items;
+  }, [hasAuthenticatedSession, items]);
 
   useEffect(() => {
     try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items)); }
@@ -98,16 +96,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsOpen(true);
       return;
     }
+    knownProductsRef.current.set(product.id, product);
     await addCartItem(toApiProductId(product.id), quantity);
-    await refreshCart();
+    setItems((previous) => {
+      const existing = previous.find((item) => item.product.id === product.id);
+      if (existing) return previous.map((item) => item.product.id === product.id
+        ? { ...item, quantity: Math.min(item.quantity + quantity, item.product.stock) } : item);
+      return [...previous, { product, quantity }];
+    });
     setIsOpen(true);
-  }, [hasAuthenticatedSession, refreshCart]);
+  }, [hasAuthenticatedSession]);
 
   const removeItem = useCallback(async (productId: string) => {
     if (!hasAuthenticatedSession) { setItems((previous) => previous.filter((item) => item.product.id !== productId)); return; }
     await removeCartItem(productId);
-    await refreshCart();
-  }, [hasAuthenticatedSession, refreshCart]);
+    setItems((previous) => previous.filter((item) => item.product.id !== productId));
+  }, [hasAuthenticatedSession]);
 
   const updateQuantity = useCallback(async (productId: string, quantity: number) => {
     if (quantity <= 0) return removeItem(productId);
@@ -116,8 +120,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     await updateCartItem(productId, quantity);
-    await refreshCart();
-  }, [hasAuthenticatedSession, refreshCart, removeItem]);
+    setItems((previous) => previous.map((item) => item.product.id === productId ? { ...item, quantity } : item));
+  }, [hasAuthenticatedSession, removeItem]);
 
   const clearCart = useCallback(async (synchronizeServer = true) => {
     if (hasAuthenticatedSession && synchronizeServer) await Promise.allSettled(items.map((item) => removeCartItem(item.product.id)));

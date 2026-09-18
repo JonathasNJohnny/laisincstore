@@ -5,6 +5,8 @@ import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
 import { useCart } from "../../contexts/CartContext";
 
+let productsRequest: Promise<Product[]> | null = null;
+
 export function normalizeApiProduct(apiProduct: {
   id: number;
   name: string;
@@ -37,8 +39,16 @@ export function normalizeApiProduct(apiProduct: {
 }
 
 export async function loadProducts(): Promise<Product[]> {
-  const data = await getProducts();
-  return data.map(normalizeApiProduct);
+  if (!productsRequest) {
+    productsRequest = getProducts()
+      .then((data) => data.map(normalizeApiProduct))
+      .catch((error) => {
+        productsRequest = null;
+        throw error;
+      });
+  }
+
+  return productsRequest;
 }
 
 export function ProductList() {
