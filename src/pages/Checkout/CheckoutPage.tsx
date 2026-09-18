@@ -23,6 +23,7 @@ import {
   type PixPayment,
 } from "../../services/api";
 import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
+import { QRCodeSVG } from "qrcode.react";
 
 const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
 
@@ -689,10 +690,16 @@ export function CheckoutPage() {
                     ? "Recebemos a confirmação do seu pagamento. Obrigada pela compra!"
                     : "Seu pagamento está pendente. A confirmação é atualizada automaticamente."}
                 </p>
-                {pixPayment?.qrCodeBase64 && (
+                {pixPayment?.qrCode ? (
+                  <div className="mx-auto mb-6 flex h-56 w-56 items-center justify-center rounded-xl border border-cinza-quente bg-branco p-3">
+                    <QRCodeSVG value={pixPayment.qrCode} size={200} level="M" includeMargin />
+                  </div>
+                ) : pixPayment?.qrCodeBase64 && (
                   <img
                     alt="QR Code Pix"
-                    src={pixPayment.qrCodeBase64}
+                    src={pixPayment.qrCodeBase64.startsWith("data:image/")
+                      ? pixPayment.qrCodeBase64
+                      : `data:image/png;base64,${pixPayment.qrCodeBase64}`}
                     className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
                   />
                 )}
