@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const rankingUrl = "/api/ranking";
+const rankingUrl = "http://laisinc.com.br:9090/Ranking/getMonthlyRanking";
 
 const months = [
   "Janeiro",
