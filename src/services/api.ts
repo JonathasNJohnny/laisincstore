@@ -88,6 +88,7 @@ export interface Order {
   email: string;
   created_at?: string;
   paid_at?: string | null;
+  pixCopyPaste?: string | null;
   items: Array<{
     productId: number | string;
     quantity: number;

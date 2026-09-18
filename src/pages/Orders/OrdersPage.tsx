@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Package } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "../../contexts/AuthContext";
 import { getOrders, type Order } from "../../services/api";
 import { formatCurrencyReal } from "../../utils/currency";
@@ -23,6 +24,7 @@ export function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copiedOrderId, setCopiedOrderId] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -34,6 +36,16 @@ export function OrdersPage() {
 
   if (!loading && !user) { navigate("/"); return null; }
   if (!user) return null;
+
+  const copyPixCode = async (orderId: string | number, code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedOrderId(orderId);
+      window.setTimeout(() => setCopiedOrderId(null), 2000);
+    } catch {
+      setError("Não foi possível copiar o código PIX. Selecione-o e copie manualmente.");
+    }
+  };
 
   return (
     <main className="container max-w-4xl py-12 lg:py-20">
@@ -72,6 +84,23 @@ export function OrdersPage() {
                 <span className="text-cinza-amarronzado">{order.paid_at ? `Pago em ${formatDate(order.paid_at)}` : "Pagamento ainda não confirmado"}</span>
                 <span className="text-lg font-bold text-roxo-profundo">Total: {formatCurrencyReal(Number(order.total_amount))}</span>
               </div>
+              {order.pixCopyPaste && (
+                <div className="mt-5 rounded-xl border border-dourado-suave/40 bg-dourado-suave/10 p-4">
+                  <h3 className="font-semibold text-roxo-profundo">Pagar com PIX</h3>
+                  <p className="mt-1 text-sm text-cinza-amarronzado">Escaneie o QR Code ou copie o código para pagar no aplicativo do seu banco.</p>
+                  <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                    <div className="rounded-xl bg-branco p-3">
+                      <QRCodeSVG value={order.pixCopyPaste} size={160} level="M" includeMargin />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <code className="block max-h-24 overflow-y-auto break-all rounded-lg bg-branco p-3 text-xs text-grafite-arroxeado">{order.pixCopyPaste}</code>
+                      <button type="button" onClick={() => void copyPixCode(order.id, order.pixCopyPaste!)} className="mt-3 rounded-xl bg-rosa-lais px-4 py-2 text-sm font-semibold text-branco">
+                        {copiedOrderId === order.id ? "Código copiado!" : "Copiar código PIX"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </article>;
           })}
         </div>
