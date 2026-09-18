@@ -84,7 +84,11 @@ export function OrdersPage() {
                 <span className="text-cinza-amarronzado">{order.paid_at ? `Pago em ${formatDate(order.paid_at)}` : "Pagamento ainda não confirmado"}</span>
                 <span className="text-lg font-bold text-roxo-profundo">Total: {formatCurrencyReal(Number(order.total_amount))}</span>
               </div>
-              {order.pixCopyPaste && (
+              {order.status === "paid" && order.pixCopyPaste ? (
+                <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
+                  Pagamento realizado com PIX.
+                </p>
+              ) : order.pixCopyPaste && (
                 <div className="mt-5 rounded-xl border border-dourado-suave/40 bg-dourado-suave/10 p-4">
                   <h3 className="font-semibold text-roxo-profundo">Pagar com PIX</h3>
                   <p className="mt-1 text-sm text-cinza-amarronzado">Escaneie o QR Code ou copie o código para pagar no aplicativo do seu banco.</p>

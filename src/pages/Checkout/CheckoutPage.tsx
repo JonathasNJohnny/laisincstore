@@ -687,14 +687,14 @@ export function CheckoutPage() {
                 </h2>
                 <p className="text-cinza-amarronzado mb-6">
                   {order?.status === "paid"
-                    ? "Recebemos a confirmação do seu pagamento. Obrigada pela compra!"
+                    ? "Pagamento realizado com Pix. Obrigada pela compra!"
                     : "Seu pagamento está pendente. A confirmação é atualizada automaticamente."}
                 </p>
-                {pixPayment?.qrCode ? (
+                {order?.status !== "paid" && pixPayment?.qrCode ? (
                   <div className="mx-auto mb-6 flex h-56 w-56 items-center justify-center rounded-xl border border-cinza-quente bg-branco p-3">
                     <QRCodeSVG value={pixPayment.qrCode} size={200} level="M" includeMargin />
                   </div>
-                ) : pixPayment?.qrCodeBase64 && (
+                ) : order?.status !== "paid" && pixPayment?.qrCodeBase64 && (
                   <img
                     alt="QR Code Pix"
                     src={pixPayment.qrCodeBase64.startsWith("data:image/")
@@ -703,12 +703,12 @@ export function CheckoutPage() {
                     className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
                   />
                 )}
-                {pixPayment?.qrCode && (
+                {order?.status !== "paid" && pixPayment?.qrCode && (
                   <button type="button" onClick={() => void navigator.clipboard.writeText(pixPayment.qrCode!)} className="mb-4 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado">
                     Copiar código Pix
                   </button>
                 )}
-                {pixPayment?.ticketUrl && (
+                {order?.status !== "paid" && pixPayment?.ticketUrl && (
                   <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>
                 )}
                 <Button
