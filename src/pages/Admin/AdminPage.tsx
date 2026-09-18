@@ -9,11 +9,14 @@ import {
 import {
   connectMercadoPago,
   disconnectMercadoPago,
+  getAdminOrders,
   getImageUrl,
   getMercadoPagoIntegration,
+  type AdminOrder,
   type MercadoPagoIntegration,
 } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatCurrencyReal } from "../../utils/currency";
 
 interface ProductFormState {
   id?: number;
@@ -41,7 +44,7 @@ const emptyForm: ProductFormState = {
 export function AdminPage() {
   const { user, loading: loadingAuth } = useAuth();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"products" | "payment">(() =>
+  const [activeTab, setActiveTab] = useState<"products" | "payment" | "orders">(() =>
     searchParams.has("mercadoPago") ? "payment" : "products",
   );
   const [integration, setIntegration] = useState<MercadoPagoIntegration | null>(null);
@@ -55,6 +58,9 @@ export function AdminPage() {
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
 
   const isAdmin = user?.admin === true;
   const categoryOptions = Array.from(
@@ -71,7 +77,7 @@ export function AdminPage() {
   );
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isAdmin || activeTab !== "products") {
       setLoading(false);
       return;
     }
@@ -88,7 +94,7 @@ export function AdminPage() {
     }
 
     loadProducts();
-  }, [isAdmin]);
+  }, [activeTab, isAdmin]);
 
   const loadIntegration = async () => {
     setLoadingIntegration(true);
@@ -108,6 +114,16 @@ export function AdminPage() {
     const timer = window.setTimeout(() => void loadIntegration(), 0);
     return () => window.clearTimeout(timer);
   }, [isAdmin, activeTab]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "orders") return;
+    setLoadingOrders(true);
+    setOrdersError("");
+    getAdminOrders()
+      .then((response) => setOrders(response.orders))
+      .catch((error) => setOrdersError(error instanceof Error ? error.message : "Não foi possível carregar os pedidos."))
+      .finally(() => setLoadingOrders(false));
+  }, [activeTab, isAdmin]);
 
   const handleConnectMercadoPago = async () => {
     setIsConnecting(true);
@@ -278,6 +294,19 @@ export function AdminPage() {
           }`}
         >
           Integrações
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "orders"}
+          onClick={() => setActiveTab("orders")}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "orders"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
+        >
+          Pedidos
         </button>
       </div>
 
@@ -548,7 +577,7 @@ export function AdminPage() {
           )}
         </section>
       </div>
-      ) : (
+      ) : activeTab === "payment" ? (
         <section
           role="tabpanel"
           aria-label="Integrações Mercado Pago"
@@ -588,6 +617,56 @@ export function AdminPage() {
               <button type="button" onClick={handleConnectMercadoPago} disabled={loadingIntegration || isConnecting} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">{isConnecting ? "Conectando..." : "Conectar Mercado Pago"}</button>
             )}
           </div>
+        </section>
+      ) : (
+        <section role="tabpanel" aria-label="Pedidos" className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">Pedidos</p>
+              <h2 className="mt-2 text-2xl font-semibold text-roxo-profundo">Todos os pedidos</h2>
+              <p className="mt-2 text-sm text-cinza-amarronzado">Histórico de compras de todos os clientes.</p>
+            </div>
+            <span className="text-sm text-cinza-amarronzado">{orders.length} pedido{orders.length === 1 ? "" : "s"}</span>
+          </div>
+
+          {loadingOrders ? (
+            <p className="mt-8 text-cinza-amarronzado">Carregando pedidos...</p>
+          ) : ordersError ? (
+            <p className="mt-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ordersError}</p>
+          ) : orders.length === 0 ? (
+            <p className="mt-8 rounded-xl border border-cinza-quente bg-cream p-6 text-center text-cinza-amarronzado">Nenhum pedido encontrado.</p>
+          ) : (
+            <div className="mt-8 space-y-4">
+              {orders.map((order) => {
+                const status = order.status === "paid"
+                  ? { label: "Pago", className: "bg-emerald-100 text-emerald-700" }
+                  : order.status === "cancelled"
+                    ? { label: "Cancelado", className: "bg-rose-100 text-rose-700" }
+                    : { label: "Aguardando pagamento", className: "bg-amber-100 text-amber-800" };
+                const createdAt = order.created_at ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at)) : "—";
+                const paidAt = order.paid_at ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.paid_at)) : null;
+                return (
+                  <article key={order.id} className="rounded-2xl border border-cinza-quente p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cinza-quente pb-4">
+                      <div>
+                        <h3 className="font-semibold text-roxo-profundo">Pedido #{order.id}</h3>
+                        <p className="mt-1 text-sm text-grafite-arroxeado">{order.customer.name} · {order.customer.email}</p>
+                        <p className="mt-1 text-xs text-cinza-amarronzado">Cliente #{order.customer.id} · Criado em {createdAt}</p>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
+                    </div>
+                    <ul className="mt-4 space-y-2 text-sm text-grafite-arroxeado">
+                      {order.items.map((item) => <li key={item.productId} className="flex flex-wrap justify-between gap-3"><span>{item.quantity}× {item.productName || `Produto #${item.productId}`}</span><span>{formatCurrencyReal(Number(item.subtotal))}</span></li>)}
+                    </ul>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-cinza-quente pt-4 text-sm">
+                      <span className="text-cinza-amarronzado">{paidAt ? `Pago em ${paidAt}` : "Ainda não pago"}</span>
+                      <span className="text-lg font-bold text-roxo-profundo">{formatCurrencyReal(Number(order.total_amount))} {order.currency}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
     </main>

@@ -86,6 +86,8 @@ export interface Order {
   total_amount: string | number;
   currency: string;
   email: string;
+  created_at?: string;
+  paid_at?: string | null;
   items: Array<{
     productId: number | string;
     quantity: number;
@@ -138,6 +140,25 @@ export function createOrder(payerEmail: string) {
 
 export function getOrder(orderId: number | string) {
   return integrationRequest<{ status: string; order: Order }>(`/api/orders/${encodeURIComponent(orderId)}`);
+}
+
+export function getOrders() {
+  return integrationRequest<{ status: string; orders: Order[] }>("/api/orders");
+}
+
+export interface AdminOrder extends Order {
+  customer: { id: number | string; name: string; email: string };
+  items: Array<{
+    productId: number | string;
+    productName?: string;
+    quantity: number;
+    unitPrice: string | number;
+    subtotal: string | number;
+  }>;
+}
+
+export function getAdminOrders() {
+  return integrationRequest<{ status: string; orders: AdminOrder[] }>("/api/orders/admin");
 }
 
 export interface CardPaymentPayload {

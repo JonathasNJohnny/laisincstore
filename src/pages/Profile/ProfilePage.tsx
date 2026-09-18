@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { updateUser, type UserPayload } from "../../services/users";
 
@@ -38,8 +39,13 @@ export function ProfilePage() {
   }
 
   return <main className="container max-w-3xl py-12 lg:py-20">
-    <h1 className="font-serif text-3xl font-bold text-roxo-profundo">Meu perfil</h1>
-    <p className="mt-2 text-cinza-amarronzado">Complete ou atualize seus dados cadastrais.</p>
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 className="font-serif text-3xl font-bold text-roxo-profundo">Meu perfil</h1>
+        <p className="mt-2 text-cinza-amarronzado">Complete ou atualize seus dados cadastrais.</p>
+      </div>
+      <Link to="/perfil/pedidos" className="rounded-xl border border-rosa-lais px-4 py-2.5 text-sm font-semibold text-rosa-lais transition-colors hover:bg-rosa-lais hover:text-branco">Meus pedidos</Link>
+    </div>
     <form onSubmit={submit} className="mt-8 grid gap-4 rounded-2xl border border-cinza-quente bg-branco p-6 shadow-sm sm:grid-cols-2">
       {fields.map(([key, label]) => <label key={key} className="grid gap-1 text-sm font-medium text-grafite-arroxeado">{label}
         <input className="rounded-xl border border-cinza-quente px-3 py-2.5" value={form[key] ?? ""} required={key === "nome"} onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))} />
