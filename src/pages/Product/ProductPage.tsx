@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -16,26 +16,59 @@ import { Button } from "../../components/Button/Button";
 import { QuantitySelector } from "../../components/QuantitySelector/QuantitySelector";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { SectionTitle } from "../../components/SectionTitle/SectionTitle";
-import {
-  getProductBySlug,
-  getRelatedProducts,
-  formatCurrency,
-} from "../../data/products";
-import { getCategoryByName } from "../../data/categories";
+import { formatCurrency } from "../../data/products";
 import { useCart } from "../../contexts/CartContext";
+import { getProductBySlug } from "../../services/api";
+import { normalizeApiProduct } from "../../components/ProductList/ProductList";
+import { slugify } from "../../utils/slugify";
+import type { Product } from "../../types";
 
 export function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
-  const product = getProductBySlug(slug || "");
-  const productCategory = product
-    ? getCategoryByName(product.category)
-    : undefined;
-  const relatedProducts = getRelatedProducts(product?.id || "");
   const { addItem, isInCart, getItemQuantity } = useCart();
 
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProduct() {
+      if (!slug) {
+        if (active) {
+          setProduct(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      setIsLoading(true);
+      setSelectedImage(0);
+
+      try {
+        const response = await getProductBySlug(slug);
+        if (active) setProduct(normalizeApiProduct(response.product));
+      } catch {
+        if (active) setProduct(null);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    loadProduct();
+    return () => {
+      active = false;
+    };
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <div className="container py-16 text-center">Carregando produto...</div>
+    );
+  }
 
   if (!product) {
     return (
@@ -53,6 +86,8 @@ export function ProductPage() {
     );
   }
 
+  const productCategorySlug = slugify(product.category);
+  const relatedProducts: Product[] = [];
   const images =
     product.images && product.images.length > 0
       ? product.images
@@ -103,7 +138,7 @@ export function ProductPage() {
             {product.category && (
               <>
                 <Link
-                  to={`/categoria/${productCategory?.slug || ""}`}
+                  to={`/categoria/${productCategorySlug}`}
                   className="hover:text-rosa-lais transition-colors"
                 >
                   {product.category}
@@ -130,6 +165,7 @@ export function ProductPage() {
                 className="absolute inset-0 w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
                 aria-label="Ampliar imagem"
               >
+                <button onClick={() => console.log("test")}>test</button>
                 <img
                   src={images[selectedImage]}
                   alt={product.name}
@@ -355,7 +391,9 @@ export function ProductPage() {
                   className="flex-1"
                   asChild
                 >
-                  <Link to="/checkout" onClick={handleAddToCart}>Comprar agora</Link>
+                  <Link to="/checkout" onClick={handleAddToCart}>
+                    Comprar agora
+                  </Link>
                 </Button>
               </div>
 

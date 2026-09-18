@@ -5,7 +5,7 @@ import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
 import { useCart } from "../../contexts/CartContext";
 
-function normalizeApiProduct(apiProduct: {
+export function normalizeApiProduct(apiProduct: {
   id: number;
   name: string;
   category?: string;

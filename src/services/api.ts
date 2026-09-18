@@ -107,6 +107,11 @@ interface ProductsResponse {
   products?: ApiProduct[];
 }
 
+interface ProductResponse {
+  status?: string;
+  product: ApiProduct;
+}
+
 export async function getProducts(): Promise<ApiProduct[]> {
   const response = await fetch(`${API_URL}/api/products`);
 
@@ -173,4 +178,22 @@ export function getImageUrl(imageUrl?: string | null): string {
   }
 
   return `${API_URL}/${imageUrl.replace(/^\/+/, "")}`;
+}
+
+export async function getProductBySlug(slug: string): Promise<ProductResponse> {
+  const response = await fetch(
+    `${API_URL}/api/products/slug/${encodeURIComponent(slug)}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("NÃ£o foi possÃ­vel carregar o produto.");
+  }
+
+  const data = (await response.json()) as ProductResponse;
+
+  if (!data.product) {
+    throw new Error("Produto nÃ£o encontrado.");
+  }
+
+  return data;
 }
