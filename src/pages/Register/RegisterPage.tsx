@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerUser, type RegistrationPayload } from "../../services/users";
+import { AuthApiError, registerUser, type RegistrationPayload } from "../../services/users";
 
 const optionalFields = [
   ["telefone", "Telefone"], ["cpf", "CPF"], ["cnpj", "CNPJ"], ["cep", "CEP"],
@@ -26,7 +26,13 @@ export function RegisterPage() {
       const payload = Object.fromEntries(Object.entries(registrationFields).filter(([, value]) => value.trim())) as RegistrationPayload;
       const result = await registerUser(payload);
       navigate(`/confirmar-email?email=${encodeURIComponent(result.email)}`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível criar a conta."); }
+    } catch (reason) {
+      if (reason instanceof AuthApiError && reason.requiresEmailVerification) {
+        navigate(`/confirmar-email?email=${encodeURIComponent(form.email.trim())}`);
+        return;
+      }
+      setError(reason instanceof Error ? reason.message : "Não foi possível criar a conta.");
+    }
     finally { setSaving(false); }
   }
 
