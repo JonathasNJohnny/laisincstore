@@ -140,7 +140,7 @@ export function CartPage() {
                 </Link>
               </Button>
               <button
-                onClick={clearCart}
+                onClick={() => void clearCart()}
                 className="text-sm text-cinza-amarronzado hover:text-red-500 transition-colors"
               >
                 Limpar carrinho

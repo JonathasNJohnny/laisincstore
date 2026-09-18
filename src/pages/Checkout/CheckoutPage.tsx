@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -6,7 +6,6 @@ import {
   Truck,
   CreditCard,
   Smartphone,
-  FileText,
   Check,
 } from "lucide-react";
 import { Button } from "../../components/Button/Button";
@@ -16,10 +15,28 @@ import { formatCurrency } from "../../utils/currency";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   ApiRequestError,
+  createCardPayment,
   createOrder,
   createPixPayment,
+  getOrder,
+  type Order,
   type PixPayment,
 } from "../../services/api";
+import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
+
+const CHECKOUT_STORAGE_KEY = "laisinc-checkout-order";
+const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
+
+if (mercadoPagoPublicKey) initMercadoPago(mercadoPagoPublicKey);
+
+function loadSavedCheckout(): { order: Order | null; pixPayment: PixPayment | null } {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHECKOUT_STORAGE_KEY) ?? "null");
+    return { order: saved?.order ?? null, pixPayment: saved?.pixPayment ?? null };
+  } catch {
+    return { order: null, pixPayment: null };
+  }
+}
 
 const shippingOptions = [
   {
@@ -58,23 +75,18 @@ const paymentMethods = [
     label: "Cartão de Crédito",
     description: "Até 6x sem juros",
   },
-  {
-    id: "boleto",
-    icon: FileText,
-    label: "Boleto Bancário",
-    description: "Vencimento em 3 dias úteis",
-  },
 ];
 
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => loadSavedCheckout().order ? 4 : 1);
   const [shipping, setShipping] = useState(shippingOptions[0].id);
   const [payment, setPayment] = useState("pix");
   const [paymentError, setPaymentError] = useState("");
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
-  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [order, setOrder] = useState<Order | null>(() => loadSavedCheckout().order);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(() => loadSavedCheckout().pixPayment);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -94,7 +106,32 @@ export function CheckoutPage() {
   const shippingCost = selectedShipping?.price || 0;
   const total = getTotal() + shippingCost;
 
-  if (items.length === 0) {
+  useEffect(() => {
+    if (user?.email && !formData.email) setFormData((current) => ({ ...current, email: user.email }));
+  }, [formData.email, user?.email]);
+
+  useEffect(() => {
+    if (!order) return;
+    localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify({ order, pixPayment }));
+  }, [order, pixPayment]);
+
+  useEffect(() => {
+    if (!order || order.status !== "pending_payment") return;
+    const refreshOrder = async () => {
+      try {
+        const response = await getOrder(order.id);
+        setOrder(response.order);
+        if (response.order.status !== "pending_payment") localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+      } catch {
+        // MantÃ©m o PIX visÃ­vel e tenta novamente no prÃ³ximo intervalo.
+      }
+    };
+    void refreshOrder();
+    const interval = window.setInterval(() => void refreshOrder(), 4000);
+    return () => window.clearInterval(interval);
+  }, [order]);
+
+  if (items.length === 0 && !order) {
     return (
       <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
         <div className="container text-center">
@@ -133,25 +170,21 @@ export function CheckoutPage() {
       setPaymentError("Entre na sua conta para finalizar a compra.");
       return;
     }
-    if (payment !== "pix") {
-      setPaymentError("No momento, apenas o Pix via Mercado Pago está disponível.");
-      return;
-    }
-
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
-      const order = await createOrder({
-        items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
-        email: formData.email,
-        shippingMethod: shipping,
-        shippingAddress: {
-          name: formData.name, phone: formData.phone, cpf: formData.cpf, cep: formData.cep,
-          address: formData.address, number: formData.number, complement: formData.complement,
-          neighborhood: formData.neighborhood, city: formData.city, state: formData.state,
-        },
-      });
-      setPixPayment(await createPixPayment(order.id, formData.email));
+      const createdOrder = order ?? (await createOrder(formData.email)).order;
+      setOrder(createdOrder);
+      // O backend limpa o carrinho ao reservar o estoque para este pedido.
+      await clearCart(false);
+
+      if (payment === "credit") return;
+      if (payment !== "pix") {
+        setPaymentError("Escolha PIX ou cartão de crédito para continuar.");
+        return;
+      }
+
+      setPixPayment(await createPixPayment(createdOrder.id));
       setStep(4);
     } catch (error) {
       const code = error instanceof ApiRequestError ? error.code : undefined;
@@ -164,6 +197,31 @@ export function CheckoutPage() {
         PAYMENT_PROVIDER_ERROR: "Não foi possível gerar o pagamento agora. Tente novamente.",
       };
       setPaymentError((code && messages[code]) || (error instanceof Error ? error.message : "Não foi possível iniciar o pagamento."));
+    } finally {
+      setIsCreatingPayment(false);
+    }
+  };
+
+  const handleCardSubmit = async (cardData: {
+    token: string;
+    payment_method_id: string;
+    installments: number;
+    issuer_id?: string;
+  }) => {
+    if (!order) return;
+    setIsCreatingPayment(true);
+    setPaymentError("");
+    try {
+      await createCardPayment({
+        orderId: order.id,
+        cardToken: cardData.token,
+        paymentMethodId: cardData.payment_method_id,
+        installments: Number(cardData.installments),
+        issuerId: cardData.issuer_id || undefined,
+      });
+      setStep(4);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Não foi possível processar o cartão.");
     } finally {
       setIsCreatingPayment(false);
     }
@@ -603,6 +661,25 @@ export function CheckoutPage() {
                     </p>
                   </div>
                 )}
+                {payment === "credit" && !order && (
+                  <p className="mt-6 text-sm text-cinza-amarronzado">
+                    Confirme para criar o pedido e carregar o formulário seguro do Mercado Pago.
+                  </p>
+                )}
+                {payment === "credit" && order && (
+                  <div className="mt-6 rounded-xl border border-cinza-quente p-4">
+                    {mercadoPagoPublicKey ? (
+                      <CardPayment
+                        initialization={{ amount: Number(order.total_amount), payer: { email: formData.email } }}
+                        locale="pt-BR"
+                        onSubmit={handleCardSubmit}
+                        onError={() => setPaymentError("Não foi possível carregar o formulário de cartão.")}
+                      />
+                    ) : (
+                      <p className="text-sm text-rose-700">Configure VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar pagamento com cartão.</p>
+                    )}
+                  </div>
+                )}
                 {paymentError && (
                   <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{paymentError}</p>
                 )}
@@ -621,15 +698,17 @@ export function CheckoutPage() {
                   />
                 </div>
                 <h2 id="step4-title" className="font-serif text-2xl font-bold text-roxo-profundo mb-3">
-                  Pague com Pix
+                  {order?.status === "paid" ? "Pagamento aprovado" : payment === "credit" ? "Pagamento em processamento" : "Pague com Pix"}
                 </h2>
                 <p className="text-cinza-amarronzado mb-6">
-                  Seu pagamento está pendente. A confirmação ocorre automaticamente após o Mercado Pago processar o Pix.
+                  {order?.status === "paid"
+                    ? "Recebemos a confirmação do seu pagamento. Obrigada pela compra!"
+                    : "Seu pagamento está pendente. A confirmação é atualizada automaticamente."}
                 </p>
                 {pixPayment?.qrCodeBase64 && (
                   <img
                     alt="QR Code Pix"
-                    src={`data:image/jpeg;base64,${pixPayment.qrCodeBase64}`}
+                    src={pixPayment.qrCodeBase64}
                     className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
                   />
                 )}
@@ -717,10 +796,10 @@ export function CheckoutPage() {
               <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                 <button
                   type="submit"
-                  disabled={step < 3 || isCreatingPayment}
+                  disabled={isCreatingPayment || step === 4 || (payment === "credit" && Boolean(order))}
                   className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
                     step < 3
-                      ? "bg-cinza-quete text-cinza-amarronzado cursor-not-allowed"
+                      ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
                       : step === 3
                         ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
                         : "bg-rosa-lais text-branco hover:bg-rosa-lais/90"
@@ -729,7 +808,11 @@ export function CheckoutPage() {
                   {step < 3
                     ? "Continuar"
                     : step === 3
-                      ? isCreatingPayment ? "Gerando Pix..." : "Gerar Pix"
+                      ? isCreatingPayment
+                        ? "Processando..."
+                        : payment === "credit"
+                          ? order ? "Preencha o cartão abaixo" : "Continuar para cartão"
+                          : "Gerar Pix"
                       : "Ver pedido"}
                 </button>
                 {step > 1 && (

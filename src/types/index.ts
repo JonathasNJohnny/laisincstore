@@ -35,10 +35,10 @@ export interface CartState {
 }
 
 export interface CartActions {
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
+  addItem: (product: Product, quantity?: number) => void | Promise<void>;
+  removeItem: (productId: string) => void | Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => void | Promise<void>;
+  clearCart: (synchronizeServer?: boolean) => void | Promise<void>;
   toggleCart: () => void;
   getSubtotal: () => number;
   getTotal: () => number;
