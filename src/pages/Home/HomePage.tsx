@@ -8,8 +8,10 @@ import { loadProducts } from "../../components/ProductList/ProductList";
 import { slugify } from "../../utils/slugify";
 import type { Category } from "../../types";
 import type { Product } from "../../types";
+import { useCart } from "../../contexts/CartContext";
 
 export function HomePage() {
+  const { addItem } = useCart();
   const [liveProducts, setLiveProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -98,7 +100,7 @@ export function HomePage() {
         <ProductGrid
           products={liveProducts.slice(0, 8)}
           loading={loadingProducts}
-          onAddToCart={() => {}}
+          onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
@@ -116,7 +118,7 @@ export function HomePage() {
         <ProductGrid
           products={liveProducts.slice(0, 8)}
           loading={loadingProducts}
-          onAddToCart={() => {}}
+          onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
@@ -137,7 +139,7 @@ export function HomePage() {
         <ProductGrid
           products={liveProducts.slice(0, 8)}
           loading={loadingProducts}
-          onAddToCart={() => {}}
+          onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
         />
       </section>
@@ -155,7 +157,7 @@ export function HomePage() {
         <ProductGrid
           products={liveProducts.slice(0, 8)}
           loading={loadingProducts}
-          onAddToCart={() => {}}
+          onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
         />
       </section>

@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import {
   createProduct,
   deleteProduct,
   getProducts,
   updateProduct,
 } from "../../services/api";
-import { getImageUrl } from "../../services/api";
+import {
+  connectMercadoPago,
+  disconnectMercadoPago,
+  getImageUrl,
+  getMercadoPagoIntegration,
+  type MercadoPagoIntegration,
+} from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface ProductFormState {
@@ -34,6 +40,14 @@ const emptyForm: ProductFormState = {
 
 export function AdminPage() {
   const { user, loading: loadingAuth } = useAuth();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"products" | "payment">(() =>
+    searchParams.has("mercadoPago") ? "payment" : "products",
+  );
+  const [integration, setIntegration] = useState<MercadoPagoIntegration | null>(null);
+  const [loadingIntegration, setLoadingIntegration] = useState(false);
+  const [integrationError, setIntegrationError] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
@@ -75,6 +89,51 @@ export function AdminPage() {
 
     loadProducts();
   }, [isAdmin]);
+
+  const loadIntegration = async () => {
+    setLoadingIntegration(true);
+    setIntegrationError("");
+    try {
+      setIntegration(await getMercadoPagoIntegration());
+    } catch (error) {
+      setIntegration(null);
+      setIntegrationError(error instanceof Error ? error.message : "Não foi possível consultar a conexão.");
+    } finally {
+      setLoadingIntegration(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "payment") return;
+    const timer = window.setTimeout(() => void loadIntegration(), 0);
+    return () => window.clearTimeout(timer);
+  }, [isAdmin, activeTab]);
+
+  const handleConnectMercadoPago = async () => {
+    setIsConnecting(true);
+    setIntegrationError("");
+    try {
+      const { authorizationUrl } = await connectMercadoPago();
+      window.location.assign(authorizationUrl);
+    } catch (error) {
+      setIntegrationError(error instanceof Error ? error.message : "Não foi possível iniciar a conexão.");
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnectMercadoPago = async () => {
+    if (!window.confirm("Deseja desconectar a conta Mercado Pago?")) return;
+    setIsConnecting(true);
+    setIntegrationError("");
+    try {
+      await disconnectMercadoPago();
+      await loadIntegration();
+    } catch (error) {
+      setIntegrationError(error instanceof Error ? error.message : "Não foi possível desconectar a conta.");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -182,11 +241,48 @@ export function AdminPage() {
           Admin
         </p>
         <h1 className="mt-2 text-4xl font-bold text-roxo-profundo">
-          Gerenciar produtos
+          Administrar
         </h1>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <div
+        role="tablist"
+        aria-label="Seções de administração"
+        className="mb-8 flex w-fit rounded-xl border border-cinza-quente bg-branco p-1 shadow-sm"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "products"}
+          onClick={() => setActiveTab("products")}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "products"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
+        >
+          Produtos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "payment"}
+          onClick={() => {
+            setActiveTab("payment");
+            void loadIntegration();
+          }}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "payment"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
+        >
+          Integrações
+        </button>
+      </div>
+
+      {activeTab === "products" ? (
+      <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
           <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
             {form.id ? "Editar produto" : "Adicionar produto"}
@@ -452,6 +548,48 @@ export function AdminPage() {
           )}
         </section>
       </div>
+      ) : (
+        <section
+          role="tabpanel"
+          aria-label="Integrações Mercado Pago"
+          className="max-w-2xl rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm sm:p-8"
+        >
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
+            Integrações
+          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-roxo-profundo">Mercado Pago</h2>
+              <p className="mt-2 text-sm text-cinza-amarronzado">A autenticação é feita com segurança no site do Mercado Pago. Nenhuma credencial é informada ou armazenada neste navegador.</p>
+            </div>
+            {loadingIntegration ? (
+              <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
+            ) : (
+              <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${integration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
+                Status: {integration?.connected ? "Conectado ✓" : "Não conectado"}
+              </span>
+            )}
+          </div>
+
+          {searchParams.has("mercadoPago") && !loadingIntegration && integration?.connected && (
+            <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Conta Mercado Pago conectada com sucesso.</p>
+          )}
+          {searchParams.has("mercadoPago") && !loadingIntegration && !integration?.connected && !integrationError && (
+            <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">A conexão não foi concluída ou foi cancelada. Você pode tentar novamente quando quiser.</p>
+          )}
+          {integrationError && (
+            <p className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{integrationError}</p>
+          )}
+
+          <div className="mt-8">
+            {integration?.connected ? (
+              <button type="button" onClick={handleDisconnectMercadoPago} disabled={isConnecting} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">{isConnecting ? "Desconectando..." : "Desconectar"}</button>
+            ) : (
+              <button type="button" onClick={handleConnectMercadoPago} disabled={loadingIntegration || isConnecting} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">{isConnecting ? "Conectando..." : "Conectar Mercado Pago"}</button>
+            )}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

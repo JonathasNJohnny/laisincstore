@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "../Button/Button";
 import { formatCurrency } from "../../utils/currency";
 import { useCart } from "../../contexts/CartContext";
+import { getImageUrl } from "../../services/api";
 
 export function CartDrawer() {
   const {
@@ -102,8 +103,9 @@ export function CartDrawer() {
                     aria-label={`Ver ${item.product.name}`}
                   >
                     <img
-                      src={item.product.image}
+                      src={getImageUrl(item.product.image)}
                       alt=""
+                      crossOrigin="anonymous"
                       className="w-full h-full object-cover"
                     />
                   </Link>

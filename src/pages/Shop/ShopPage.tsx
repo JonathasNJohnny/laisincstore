@@ -2,12 +2,10 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { SearchBar } from "../../components/SearchBar/SearchBar";
-import {
-  products,
-  searchProducts,
-  getAllCategories,
-} from "../../data/products";
+import { loadProducts } from "../../components/ProductList/ProductList";
 import { formatCurrency } from "../../utils/currency";
+import { useCart } from "../../contexts/CartContext";
+import type { Product } from "../../types";
 
 const SORT_OPTIONS = [
   { value: "name-asc", label: "Nome: A-Z" },
@@ -18,10 +16,14 @@ const SORT_OPTIONS = [
 ];
 
 export function ShopPage() {
+  const { addItem } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [sortBy, setSortBy] = useState("newest");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const searchQuery = searchParams.get("search") || "";
   const categoryParam = searchParams.get("category") || "";
@@ -35,13 +37,42 @@ export function ShopPage() {
     }
   }, [searchParams]);
 
-  const allCategories = useMemo(() => getAllCategories(), []);
+  useEffect(() => {
+    let active = true;
+
+    loadProducts()
+      .then((result) => {
+        if (active) setProducts(result);
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar produtos da loja:", error);
+        if (active) setLoadError("NÃ£o foi possÃ­vel carregar os produtos.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const allCategories = useMemo(
+    () => [...new Set(products.map((product) => product.category))].sort(),
+    [products],
+  );
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
     if (searchQuery) {
-      result = searchProducts(searchQuery);
+      const normalizedQuery = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (product) =>
+          product.name.toLowerCase().includes(normalizedQuery) ||
+          product.category.toLowerCase().includes(normalizedQuery) ||
+          product.description.toLowerCase().includes(normalizedQuery),
+      );
     }
 
     if (selectedCategory) {
@@ -67,9 +98,7 @@ export function ShopPage() {
         break;
       case "newest":
       default:
-        result.sort((a, b) =>
-          b.featured === a.featured ? 0 : b.featured ? 1 : -1,
-        );
+        // A API jÃ¡ entrega os produtos na ordem de exibiÃ§Ã£o cadastrada.
         break;
     }
 
@@ -214,12 +243,12 @@ export function ShopPage() {
             <ProductGrid
               products={filteredProducts}
               variant="compact"
-              loading={false}
-              onAddToCart={() => {}}
+              loading={loading}
+              onAddToCart={addItem}
               emptyMessage={
-                searchQuery
+                loadError || (searchQuery
                   ? `Nenhum produto encontrado para "${searchQuery}"`
-                  : "Nenhum produto encontrado com os filtros selecionados"
+                  : "Nenhum produto encontrado com os filtros selecionados")
               }
             />
             <div className="flex justify-end mb-6 mt-2 mr-2">

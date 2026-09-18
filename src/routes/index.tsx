@@ -16,6 +16,7 @@ import { ThanksPage } from "../pages/Thanks/ThanksPage";
 import { AdminPage } from "../pages/Admin/AdminPage";
 import { RegisterPage } from "../pages/Register/RegisterPage";
 import { ProfilePage } from "../pages/Profile/ProfilePage";
+import { VerifyEmailPage } from "../pages/VerifyEmail/VerifyEmailPage";
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
       { path: "loja", element: <ShopPage /> },
       { path: "administrar", element: <AdminPage /> },
       { path: "cadastro", element: <RegisterPage /> },
+      { path: "confirmar-email", element: <VerifyEmailPage /> },
       { path: "perfil", element: <ProfilePage /> },
       { path: "produto/:slug", element: <ProductPage /> },
       { path: "categoria/:slug", element: <CategoryPage /> },

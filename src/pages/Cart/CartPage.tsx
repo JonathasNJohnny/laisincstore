@@ -4,6 +4,7 @@ import { Button } from "../../components/Button/Button";
 import { QuantitySelector } from "../../components/QuantitySelector/QuantitySelector";
 import { useCart } from "../../contexts/CartContext";
 import { formatCurrency } from "../../utils/currency";
+import { getImageUrl } from "../../services/api";
 
 export function CartPage() {
   const {
@@ -85,8 +86,9 @@ export function CartPage() {
                   aria-label={`Ver ${item.product.name}`}
                 >
                   <img
-                    src={item.product.image}
+                    src={getImageUrl(item.product.image)}
                     alt=""
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                   />
                 </Link>

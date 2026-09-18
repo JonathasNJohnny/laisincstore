@@ -3,6 +3,7 @@ import { ProductGrid } from "../ProductGrid/ProductGrid";
 import { getProducts, getImageUrl } from "../../services/api";
 import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
+import { useCart } from "../../contexts/CartContext";
 
 function normalizeApiProduct(apiProduct: {
   id: number;
@@ -41,6 +42,7 @@ export async function loadProducts(): Promise<Product[]> {
 }
 
 export function ProductList() {
+  const { addItem } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -102,7 +104,7 @@ export function ProductList() {
     <ProductGrid
       products={products.slice(0, 8)}
       loading={false}
-      onAddToCart={() => {}}
+      onAddToCart={addItem}
       emptyMessage="Nenhum produto cadastrado."
     />
   );

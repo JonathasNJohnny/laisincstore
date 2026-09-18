@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
 import { SocialLinks } from "../SocialLinks/SocialLinks";
 import { SearchBar } from "../SearchBar/SearchBar";
 import { CartDrawer } from "../CartDrawer/CartDrawer";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { AuthApiError } from "../../services/users";
 import type { NavItem } from "../../types";
 import logo from "../../assets/logo.png";
 
@@ -59,6 +60,7 @@ export function Header() {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { getItemCount, toggleCart } = useCart();
   const { user, login, logout } = useAuth();
 
@@ -92,7 +94,12 @@ export function Header() {
     event.preventDefault();
     setLoginError(""); setIsLoggingIn(true);
     try { await login(email, password); setIsAccountOpen(false); setPassword(""); }
-    catch (error) { setLoginError(error instanceof Error ? error.message : "Não foi possível entrar."); }
+    catch (error) {
+      if (error instanceof AuthApiError && error.requiresEmailVerification) {
+        setIsAccountOpen(false);
+        navigate(`/confirmar-email?email=${encodeURIComponent(email)}`);
+      } else setLoginError(error instanceof Error ? error.message : "Não foi possível entrar.");
+    }
     finally { setIsLoggingIn(false); }
   }
 

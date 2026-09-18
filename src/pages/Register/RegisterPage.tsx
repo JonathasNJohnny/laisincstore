@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
 import { registerUser, type RegistrationPayload } from "../../services/users";
 
 const optionalFields = [
@@ -10,7 +9,6 @@ const optionalFields = [
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [form, setForm] = useState<Record<string, string>>({ nome: "", email: "", senha: "", confirmarSenha: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -23,11 +21,11 @@ export function RegisterPage() {
     if (form.senha !== form.confirmarSenha) return setError("As senhas não coincidem.");
     setSaving(true);
     try {
-      const { confirmarSenha: _, ...registrationFields } = form;
+      const registrationFields = { ...form };
+      delete registrationFields.confirmarSenha;
       const payload = Object.fromEntries(Object.entries(registrationFields).filter(([, value]) => value.trim())) as RegistrationPayload;
-      await registerUser(payload);
-      await login(form.email, form.senha);
-      navigate("/");
+      const result = await registerUser(payload);
+      navigate(`/confirmar-email?email=${encodeURIComponent(result.email)}`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível criar a conta."); }
     finally { setSaving(false); }
   }

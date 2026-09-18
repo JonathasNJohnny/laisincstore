@@ -4,8 +4,10 @@ import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { loadProducts } from "../../components/ProductList/ProductList";
 import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
+import { useCart } from "../../contexts/CartContext";
 
 export function CategoryPage() {
+  const { addItem } = useCart();
   const { slug } = useParams<{ slug: string }>();
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export function CategoryPage() {
           products={categoryProducts}
           variant="default"
           loading={false}
-          onAddToCart={() => {}}
+          onAddToCart={addItem}
           emptyMessage={`Nenhum produto encontrado na categoria ${category}`}
         />
       </section>

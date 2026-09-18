@@ -1,5 +1,17 @@
 # React + TypeScript + Vite
 
+## Confirmação de e-mail
+
+O cliente usa a API de autenticação em `VITE_API_URL` (ou `http://localhost:3017`) e
+espera as rotas `POST /api/auth/register`, `login`, `verify-email` e
+`resend-verification`. Após o cadastro, o usuário é direcionado para
+`/confirmar-email`, onde informa o código de seis dígitos ou solicita um reenvio.
+
+O servidor deve manter os segredos apenas no seu arquivo `.env` (que já é ignorado
+pelo Git) e configurar o Gmail com `MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`,
+`MAIL_USER`, `MAIL_PASSWORD` (senha de app) e `MAIL_FROM`. Nunca exponha essas
+variáveis por meio de `VITE_*`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

@@ -11,7 +11,15 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/Button/Button";
 import { useCart } from "../../contexts/CartContext";
+import { getImageUrl } from "../../services/api";
 import { formatCurrency } from "../../utils/currency";
+import { useAuth } from "../../contexts/AuthContext";
+import {
+  ApiRequestError,
+  createOrder,
+  createPixPayment,
+  type PixPayment,
+} from "../../services/api";
 
 const shippingOptions = [
   {
@@ -60,9 +68,13 @@ const paymentMethods = [
 
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [shipping, setShipping] = useState(shippingOptions[0].id);
   const [payment, setPayment] = useState("pix");
+  const [paymentError, setPaymentError] = useState("");
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -109,14 +121,51 @@ export function CheckoutPage() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (step === 4) return;
     if (step < 3) {
       setStep((prev) => prev + 1);
-    } else {
-      alert("Pedido realizado com sucesso! (Demo)");
-      clearCart();
-      setStep(1);
+      return;
+    }
+
+    if (!user) {
+      setPaymentError("Entre na sua conta para finalizar a compra.");
+      return;
+    }
+    if (payment !== "pix") {
+      setPaymentError("No momento, apenas o Pix via Mercado Pago está disponível.");
+      return;
+    }
+
+    setIsCreatingPayment(true);
+    setPaymentError("");
+    try {
+      const order = await createOrder({
+        items: items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+        email: formData.email,
+        shippingMethod: shipping,
+        shippingAddress: {
+          name: formData.name, phone: formData.phone, cpf: formData.cpf, cep: formData.cep,
+          address: formData.address, number: formData.number, complement: formData.complement,
+          neighborhood: formData.neighborhood, city: formData.city, state: formData.state,
+        },
+      });
+      setPixPayment(await createPixPayment(order.id, formData.email));
+      setStep(4);
+    } catch (error) {
+      const code = error instanceof ApiRequestError ? error.code : undefined;
+      const messages: Record<string, string> = {
+        MERCADO_PAGO_NOT_CONNECTED: "O Mercado Pago não está conectado. Avise a administração da loja.",
+        MERCADO_PAGO_RECONNECT_REQUIRED: "A conta Mercado Pago precisa ser conectada novamente.",
+        PAYMENT_ALREADY_PAID: "Este pedido já foi pago.",
+        PAYMENT_INVALID_ORDER: "Este pedido não pode ser pago.",
+        PAYMENT_ORDER_NOT_CONFIGURED: "O checkout ainda não foi configurado pela loja.",
+        PAYMENT_PROVIDER_ERROR: "Não foi possível gerar o pagamento agora. Tente novamente.",
+      };
+      setPaymentError((code && messages[code]) || (error instanceof Error ? error.message : "Não foi possível iniciar o pagamento."));
+    } finally {
+      setIsCreatingPayment(false);
     }
   };
 
@@ -554,6 +603,9 @@ export function CheckoutPage() {
                     </p>
                   </div>
                 )}
+                {paymentError && (
+                  <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{paymentError}</p>
+                )}
               </section>
             )}
 
@@ -568,28 +620,32 @@ export function CheckoutPage() {
                     aria-hidden="true"
                   />
                 </div>
-                <h2
-                  id="step4-title"
-                  className="font-serif text-2xl font-bold text-roxo-profundo mb-3"
-                >
-                  Pedido confirmado!
+                <h2 id="step4-title" className="font-serif text-2xl font-bold text-roxo-profundo mb-3">
+                  Pague com Pix
                 </h2>
                 <p className="text-cinza-amarronzado mb-6">
-                  Obrigada pela sua compra! Enviamos a confirmação para{" "}
-                  <strong>{formData.email}</strong>.
+                  Seu pagamento está pendente. A confirmação ocorre automaticamente após o Mercado Pago processar o Pix.
                 </p>
-                <p className="text-cinza-amarronzado mb-8">
-                  Número do pedido:{" "}
-                  <strong className="font-mono">
-                    #LAIS-{Date.now().toString().slice(-6)}
-                  </strong>
-                </p>
+                {pixPayment?.qrCodeBase64 && (
+                  <img
+                    alt="QR Code Pix"
+                    src={`data:image/jpeg;base64,${pixPayment.qrCodeBase64}`}
+                    className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
+                  />
+                )}
+                {pixPayment?.qrCode && (
+                  <button type="button" onClick={() => void navigator.clipboard.writeText(pixPayment.qrCode!)} className="mb-4 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado">
+                    Copiar código Pix
+                  </button>
+                )}
+                {pixPayment?.ticketUrl && (
+                  <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>
+                )}
                 <Button
                   variant="primary"
                   size="lg"
                   onClick={() => {
                     clearCart();
-                    setStep(1);
                   }}
                   asChild
                 >
@@ -608,8 +664,9 @@ export function CheckoutPage() {
                 {items.map((item) => (
                   <div key={item.product.id} className="flex gap-3">
                     <img
-                      src={item.product.image}
+                      src={getImageUrl(item.product.image)}
                       alt=""
+                      crossOrigin="anonymous"
                       className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0 text-sm">
@@ -660,7 +717,7 @@ export function CheckoutPage() {
               <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                 <button
                   type="submit"
-                  disabled={step < 3}
+                  disabled={step < 3 || isCreatingPayment}
                   className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
                     step < 3
                       ? "bg-cinza-quete text-cinza-amarronzado cursor-not-allowed"
@@ -672,7 +729,7 @@ export function CheckoutPage() {
                   {step < 3
                     ? "Continuar"
                     : step === 3
-                      ? "Finalizar pedido"
+                      ? isCreatingPayment ? "Gerando Pix..." : "Gerar Pix"
                       : "Ver pedido"}
                 </button>
                 {step > 1 && (

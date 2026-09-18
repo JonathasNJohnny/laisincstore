@@ -1,7 +1,94 @@
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3017").replace(
+export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3017").replace(
   /\/+$/,
   "",
 );
+
+export class ApiRequestError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.code = code;
+  }
+}
+
+function authHeaders(extra: HeadersInit = {}): HeadersInit {
+  const token = localStorage.getItem("laisinc_auth_token");
+  return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+async function integrationRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: authHeaders(init.headers),
+  });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = data && typeof data === "object" && "message" in data && typeof data.message === "string"
+      ? data.message
+      : "Não foi possível concluir a solicitação.";
+    const code = data && typeof data === "object" && "code" in data && typeof data.code === "string"
+      ? data.code
+      : undefined;
+    throw new ApiRequestError(message, code);
+  }
+
+  return data as T;
+}
+
+export interface MercadoPagoIntegration {
+  provider: "mercado_pago";
+  connected: boolean;
+  active: boolean;
+}
+
+export function getMercadoPagoIntegration() {
+  return integrationRequest<MercadoPagoIntegration>("/api/integrations/mercado-pago/status");
+}
+
+export function connectMercadoPago() {
+  return integrationRequest<{ authorizationUrl: string }>("/api/integrations/mercado-pago/connect", {
+    headers: { Accept: "application/json" },
+  });
+}
+
+export function disconnectMercadoPago() {
+  return integrationRequest<void>("/api/integrations/mercado-pago", { method: "DELETE" });
+}
+
+export interface PixPayment {
+  id: number | string;
+  paymentId: string;
+  status: "pending" | "approved" | "rejected" | "cancelled" | "refunded";
+  qrCode?: string;
+  qrCodeBase64?: string;
+  ticketUrl?: string;
+}
+
+export function createPixPayment(orderId: number | string, payerEmail: string) {
+  return integrationRequest<PixPayment>("/api/payments/pix", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId, payerEmail }),
+  });
+}
+
+export interface CreateOrderPayload {
+  items: Array<{ productId: string; quantity: number }>;
+  email: string;
+  shippingMethod: string;
+  shippingAddress: Record<string, string>;
+}
+
+export function createOrder(payload: CreateOrderPayload) {
+  return integrationRequest<{ id: number | string }>("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
 
 export interface ApiProduct {
   id: number;
@@ -74,7 +161,14 @@ export function getImageUrl(imageUrl?: string | null): string {
     return "/imagem-padrao.png";
   }
 
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+  if (
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://") ||
+    imageUrl.startsWith("data:") ||
+    imageUrl.startsWith("blob:") ||
+    imageUrl.startsWith("/assets/") ||
+    imageUrl === "/imagem-padrao.png"
+  ) {
     return imageUrl;
   }
 

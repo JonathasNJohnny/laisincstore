@@ -355,7 +355,7 @@ export function ProductPage() {
                   className="flex-1"
                   asChild
                 >
-                  <Link to="/carrinho">Comprar agora</Link>
+                  <Link to="/checkout" onClick={handleAddToCart}>Comprar agora</Link>
                 </Button>
               </div>
 
@@ -410,7 +410,7 @@ export function ProductPage() {
             products={relatedProducts}
             variant="default"
             loading={false}
-            onAddToCart={() => {}}
+            onAddToCart={addItem}
           />
         </section>
       )}
