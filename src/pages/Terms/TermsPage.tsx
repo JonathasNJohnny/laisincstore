@@ -47,8 +47,7 @@ Você é responsável por todas as atividades em sua conta. Podemos suspender ou
     title: "6. Entrega e Frete",
     content: `**Prazos:** Estimados no checkout, contados a partir da aprovação do pagamento.
 **Responsabilidade:** Entregas via Correios/transportadoras. Atrasos por força maior não são nossa responsabilidade.
-**Endereço:** O Cliente deve garantir endereço correto e alguém para receber. Reentregas podem gerar custo adicional.
-**Frete grátis:** Em pedidos acima de R$ 299,00 (sujeito a regiões).`,
+**Endereço:** O Cliente deve garantir endereço correto e alguém para receber. Reentregas podem gerar custo adicional.`,
   },
   {
     id: "trocas-devolucoes",

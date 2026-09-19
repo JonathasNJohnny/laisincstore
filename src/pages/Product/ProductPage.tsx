@@ -404,7 +404,7 @@ export function ProductPage() {
                     aria-hidden="true"
                   />
                   <span className="text-grafite-arroxeado">
-                    Frete grátis acima de R$ 299
+                    Envio para todo o Brasil
                   </span>
                 </div>
                 <div className="flex items-center gap-2 p-3 bg-branco rounded-xl border border-cinza-quente">

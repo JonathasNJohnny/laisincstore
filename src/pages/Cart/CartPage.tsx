@@ -18,7 +18,7 @@ export function CartPage() {
 
   const subtotal = getSubtotal();
   const total = getTotal();
-  const shipping = subtotal >= 29900 ? 0 : 1590;
+  const shipping = 1590;
 
   if (items.length === 0) {
     return (
@@ -169,19 +169,9 @@ export function CartPage() {
                       Frete estimado
                     </span>
                     <span className="font-medium text-grafite-arroxeado">
-                      {shipping === 0 ? (
-                        <span className="text-rosa-lais">Grátis!</span>
-                      ) : (
-                        formatCurrency(shipping)
-                      )}
+                      {formatCurrency(shipping)}
                     </span>
                   </div>
-                  {shipping > 0 && (
-                    <p className="text-xs text-rosa-lais text-center bg-rosa-lais/10 rounded-xl py-2">
-                      Faltam {formatCurrency(29900 - subtotal)} para frete
-                      grátis!
-                    </p>
-                  )}
                   <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-3 border-t border-cinza-quete">
                     <span>Total</span>
                     <span>{formatCurrency(total + shipping)}</span>
@@ -228,12 +218,6 @@ export function CartPage() {
                 </div>
               </div>
 
-              <div className="bg-rosa-lais/10 rounded-2xl p-6 text-center border border-rosa-lais/20">
-                <p className="text-sm text-rosa-lais font-medium">
-                  💝 Adicione mais {formatCurrency(29900 - subtotal)} para
-                  ganhar frete grátis!
-                </p>
-              </div>
             </aside>
           </div>
         </div>

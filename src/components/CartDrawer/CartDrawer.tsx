@@ -41,7 +41,7 @@ export function CartDrawer() {
   const subtotal = getSubtotal();
   const total = getTotal();
   const itemCount = getItemCount();
-  const shipping = subtotal >= 29900 ? 0 : 1590; // Frete grátis acima de R$ 299,00
+  const shipping = 1590;
 
   return (
     <>
@@ -169,18 +169,9 @@ export function CartDrawer() {
                 <div className="flex justify-between text-sm">
                   <span className="text-cinza-amarronzado">Frete estimado</span>
                   <span className="font-medium text-grafite-arroxeado">
-                    {shipping === 0 ? (
-                      <span className="text-rosa-lais">Grátis!</span>
-                    ) : (
-                      formatCurrency(shipping)
-                    )}
+                    {formatCurrency(shipping)}
                   </span>
                 </div>
-                {shipping > 0 && subtotal > 0 && (
-                  <p className="text-xs text-rosa-lais text-center">
-                    Faltam {formatCurrency(29900 - subtotal)} para frete grátis!
-                  </p>
-                )}
                 <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-2 border-t border-cinza-quente">
                   <span>Total</span>
                   <span>{formatCurrency(total)}</span>

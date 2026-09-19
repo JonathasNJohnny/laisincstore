@@ -58,6 +58,90 @@ export function disconnectMercadoPago() {
   return integrationRequest<void>("/api/integrations/mercado-pago", { method: "DELETE" });
 }
 
+export interface SuperFreteIntegration {
+  provider: "superfrete";
+  connected: boolean;
+  active: boolean;
+  originPostalCode?: string | null;
+}
+
+export interface SuperFreteConnectionPayload {
+  token: string;
+  originPostalCode: string;
+}
+
+export function getSuperFreteIntegration() {
+  return integrationRequest<SuperFreteIntegration>("/api/integrations/superfrete/status");
+}
+
+export function saveSuperFreteIntegration(payload: SuperFreteConnectionPayload) {
+  return integrationRequest<SuperFreteIntegration>("/api/integrations/superfrete", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function disconnectSuperFrete() {
+  return integrationRequest<void>("/api/integrations/superfrete", { method: "DELETE" });
+}
+
+export interface ShippingQuote {
+  serviceId: number | string;
+  name: string;
+  company: string;
+  price: number;
+  deliveryTime: number;
+}
+
+interface RawShippingQuote {
+  serviceId?: number | string;
+  service_id?: number | string;
+  id?: number | string;
+  name?: string;
+  company?: string;
+  carrier?: string;
+  price?: number | string;
+  deliveryTime?: number | string;
+  delivery_time?: number | string;
+}
+
+interface ShippingQuoteResponse {
+  options?: RawShippingQuote[];
+  quotes?: RawShippingQuote[];
+  services?: RawShippingQuote[];
+}
+
+export async function getShippingQuote(
+  destinationPostalCode: string,
+  items: Array<{ productId: number | string; quantity: number }>,
+): Promise<ShippingQuote[]> {
+  const response = await integrationRequest<RawShippingQuote[] | ShippingQuoteResponse>("/api/shipping/quote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ destinationPostalCode, items }),
+  });
+
+  const quotes = Array.isArray(response)
+    ? response
+    : response.options ?? response.quotes ?? response.services ?? [];
+
+  return quotes.flatMap((quote) => {
+    const serviceId = quote.serviceId ?? quote.service_id ?? quote.id;
+    const price = Number(quote.price);
+    const deliveryTime = Number(quote.deliveryTime ?? quote.delivery_time);
+    if (serviceId == null || !quote.name || !Number.isFinite(price) || !Number.isFinite(deliveryTime)) return [];
+
+    return [{
+      serviceId,
+      name: quote.name,
+      company: quote.company ?? quote.carrier ?? "Transportadora",
+      price,
+      deliveryTime,
+    }];
+  });
+}
+
 export interface PixPayment {
   id: number | string;
   paymentId: string;
@@ -131,11 +215,20 @@ export function createPixPayment(orderId: number | string) {
   });
 }
 
-export function createOrder(payerEmail: string) {
+export interface OrderShipping {
+  serviceId: number | string;
+  name: string;
+  company: string;
+  price: number;
+  deliveryTime: number;
+  destinationPostalCode: string;
+}
+
+export function createOrder(payerEmail: string, shipping: OrderShipping) {
   return integrationRequest<{ status: string; order: Order }>("/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ payerEmail }),
+    body: JSON.stringify({ payerEmail, shipping }),
   });
 }
 
@@ -186,6 +279,7 @@ export interface ApiProduct {
   description?: string;
   price: string | number;
   stock?: number;
+  weight_grams?: number | null;
   image_url?: string | null;
   active?: number;
   order?: number;
@@ -214,6 +308,7 @@ export async function getProducts(): Promise<ApiProduct[]> {
 export async function createProduct(formData: FormData) {
   const response = await fetch(`${API_URL}/api/products`, {
     method: "POST",
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -227,6 +322,7 @@ export async function createProduct(formData: FormData) {
 export async function updateProduct(id: number | string, formData: FormData) {
   const response = await fetch(`${API_URL}/api/products/${id}`, {
     method: "PUT",
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -240,6 +336,7 @@ export async function updateProduct(id: number | string, formData: FormData) {
 export async function deleteProduct(id: number | string) {
   const response = await fetch(`${API_URL}/api/products/${id}`, {
     method: "DELETE",
+    headers: authHeaders(),
   });
 
   if (!response.ok) {

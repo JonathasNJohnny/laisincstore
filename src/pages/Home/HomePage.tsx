@@ -150,9 +150,9 @@ export function HomePage() {
       >
         <SectionTitle
           className="mt-[20px]"
-          title="Ofertas Especiais"
-          subtitle="Descontos imperdíveis por tempo limitado"
-          action={{ label: "Ver todas ofertas", href: "/loja?badge=Oferta" }}
+          title="Mais produtos"
+          subtitle="Confira nossas novidades"
+          action={{ label: "Ver todos os produtos", href: "/loja" }}
         />
         <ProductGrid
           products={liveProducts.slice(0, 8)}

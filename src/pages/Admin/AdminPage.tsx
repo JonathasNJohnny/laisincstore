@@ -12,8 +12,12 @@ import {
   getAdminOrders,
   getImageUrl,
   getMercadoPagoIntegration,
+  getSuperFreteIntegration,
+  saveSuperFreteIntegration,
+  disconnectSuperFrete,
   type AdminOrder,
   type MercadoPagoIntegration,
+  type SuperFreteIntegration,
 } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatCurrencyReal } from "../../utils/currency";
@@ -26,6 +30,7 @@ interface ProductFormState {
   description: string;
   price: string;
   stock: string;
+  weightGrams: string;
   active: boolean;
   order: boolean;
 }
@@ -37,6 +42,7 @@ const emptyForm: ProductFormState = {
   description: "",
   price: "",
   stock: "",
+  weightGrams: "",
   active: true,
   order: false,
 };
@@ -51,6 +57,12 @@ export function AdminPage() {
   const [loadingIntegration, setLoadingIntegration] = useState(false);
   const [integrationError, setIntegrationError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [superFreteIntegration, setSuperFreteIntegration] = useState<SuperFreteIntegration | null>(null);
+  const [loadingSuperFrete, setLoadingSuperFrete] = useState(false);
+  const [superFreteError, setSuperFreteError] = useState("");
+  const [isSavingSuperFrete, setIsSavingSuperFrete] = useState(false);
+  const [superFreteForm, setSuperFreteForm] = useState({ token: "", originPostalCode: "" });
+  const [isSuperFreteHelpOpen, setIsSuperFreteHelpOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
@@ -109,9 +121,30 @@ export function AdminPage() {
     }
   };
 
+  const loadSuperFreteIntegration = async () => {
+    setLoadingSuperFrete(true);
+    setSuperFreteError("");
+    try {
+      const currentIntegration = await getSuperFreteIntegration();
+      setSuperFreteIntegration(currentIntegration);
+      setSuperFreteForm((current) => ({
+        ...current,
+        originPostalCode: currentIntegration.originPostalCode ?? "",
+      }));
+    } catch (error) {
+      setSuperFreteIntegration(null);
+      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível consultar a conexão.");
+    } finally {
+      setLoadingSuperFrete(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin || activeTab !== "payment") return;
-    const timer = window.setTimeout(() => void loadIntegration(), 0);
+    const timer = window.setTimeout(() => {
+      void loadIntegration();
+      void loadSuperFreteIntegration();
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [isAdmin, activeTab]);
 
@@ -151,6 +184,44 @@ export function AdminPage() {
     }
   };
 
+  const handleSaveSuperFrete = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const token = superFreteForm.token.trim();
+    const originPostalCode = superFreteForm.originPostalCode.replace(/\D/g, "");
+
+    if (!token || originPostalCode.length !== 8) {
+      setSuperFreteError("Informe o token e um CEP de origem válido com oito dígitos.");
+      return;
+    }
+
+    setIsSavingSuperFrete(true);
+    setSuperFreteError("");
+    try {
+      await saveSuperFreteIntegration({ token, originPostalCode });
+      setSuperFreteForm({ token: "", originPostalCode });
+      await loadSuperFreteIntegration();
+    } catch (error) {
+      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível salvar a conexão.");
+    } finally {
+      setIsSavingSuperFrete(false);
+    }
+  };
+
+  const handleDisconnectSuperFrete = async () => {
+    if (!window.confirm("Deseja desconectar a conta SuperFrete?")) return;
+    setIsSavingSuperFrete(true);
+    setSuperFreteError("");
+    try {
+      await disconnectSuperFrete();
+      setSuperFreteForm({ token: "", originPostalCode: "" });
+      await loadSuperFreteIntegration();
+    } catch (error) {
+      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível desconectar a conta.");
+    } finally {
+      setIsSavingSuperFrete(false);
+    }
+  };
+
   const resetForm = () => {
     setForm(emptyForm);
     setImage(null);
@@ -163,6 +234,11 @@ export function AdminPage() {
     setSubmitError("");
 
     try {
+      const weightGrams = Number(form.weightGrams);
+      if (!Number.isInteger(weightGrams) || weightGrams <= 0) {
+        throw new Error("Informe o peso em gramas como um número inteiro maior que zero.");
+      }
+
       const payload = new FormData();
       payload.append("name", form.name);
       payload.append("category", form.category);
@@ -170,6 +246,7 @@ export function AdminPage() {
       payload.append("description", form.description);
       payload.append("price", String(form.price));
       payload.append("stock", String(form.stock));
+      payload.append("weightGrams", String(weightGrams));
       payload.append("active", form.active ? "1" : "0");
       payload.append("order", form.order ? "1" : "0");
 
@@ -206,6 +283,7 @@ export function AdminPage() {
       description: product.description ?? "",
       price: String(product.price ?? ""),
       stock: String(product.stock ?? 0),
+      weightGrams: product.weight_grams == null ? "" : String(product.weight_grams),
       active: Boolean(Number(product.active ?? 1)),
       order: Boolean(Number(product.order ?? 0)),
     });
@@ -286,6 +364,7 @@ export function AdminPage() {
           onClick={() => {
             setActiveTab("payment");
             void loadIntegration();
+            void loadSuperFreteIntegration();
           }}
           className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
             activeTab === "payment"
@@ -424,6 +503,23 @@ export function AdminPage() {
                   value={form.stock}
                   onChange={(event) =>
                     setForm({ ...form, stock: event.target.value })
+                  }
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                  Peso (g)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.weightGrams}
+                  onChange={(event) =>
+                    setForm({ ...form, weightGrams: event.target.value })
                   }
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
@@ -616,6 +712,88 @@ export function AdminPage() {
             ) : (
               <button type="button" onClick={handleConnectMercadoPago} disabled={loadingIntegration || isConnecting} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">{isConnecting ? "Conectando..." : "Conectar Mercado Pago"}</button>
             )}
+          </div>
+          <div className="relative mt-10 border-t border-cinza-quente pt-8">
+          <button
+            type="button"
+            aria-label="Como obter o token da SuperFrete"
+            aria-expanded={isSuperFreteHelpOpen}
+            onClick={() => setIsSuperFreteHelpOpen((isOpen) => !isOpen)}
+            className="absolute right-0 top-6 flex h-8 w-8 items-center justify-center rounded-full border border-cinza-quente bg-branco text-sm font-bold text-roxo-profundo shadow-sm transition-colors hover:bg-rosa-lais/10"
+          >
+            ?
+          </button>
+          {isSuperFreteHelpOpen && (
+            <div role="tooltip" className="absolute right-0 top-16 z-10 w-72 rounded-xl border border-cinza-quente bg-branco p-4 text-sm leading-relaxed text-grafite-arroxeado shadow-lg">
+              Acesse sua conta SuperFrete e procure as opções de integrações ou configurações para gerar e copiar o token de API. Cole-o aqui uma única vez; por segurança, ele não será exibido novamente.
+            </div>
+          )}
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
+            Integrações &gt; SuperFrete
+          </p>
+          <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-roxo-profundo">SuperFrete</h2>
+              <p className="mt-2 text-sm text-cinza-amarronzado">
+                Cole o token gerado na sua conta SuperFrete. Ele é enviado somente para o servidor e nunca é exibido ou salvo neste navegador.
+              </p>
+            </div>
+            {loadingSuperFrete ? (
+              <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
+            ) : (
+              <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${superFreteIntegration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
+                Status: {superFreteIntegration?.connected ? "Conectado" : "Não conectado"}
+              </span>
+            )}
+          </div>
+
+          {superFreteIntegration?.connected && (
+            <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Integração ativa. CEP de origem: {superFreteIntegration.originPostalCode ?? "não informado"}.
+            </p>
+          )}
+          {superFreteError && (
+            <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{superFreteError}</p>
+          )}
+
+          <form onSubmit={handleSaveSuperFrete} className="mt-8 space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-token">Token secreto</label>
+              <input
+                id="superfrete-token"
+                type="password"
+                autoComplete="off"
+                value={superFreteForm.token}
+                onChange={(event) => setSuperFreteForm({ ...superFreteForm, token: event.target.value })}
+                placeholder={superFreteIntegration?.connected ? "Informe outro token para substituir" : "Cole o token da SuperFrete"}
+                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-origin-postal-code">CEP de origem</label>
+              <input
+                id="superfrete-origin-postal-code"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                value={superFreteForm.originPostalCode}
+                onChange={(event) => setSuperFreteForm({ ...superFreteForm, originPostalCode: event.target.value })}
+                placeholder="01001-000"
+                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                required
+              />
+            </div>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button type="submit" disabled={loadingSuperFrete || isSavingSuperFrete} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
+                {isSavingSuperFrete ? "Salvando..." : "Salvar conexão"}
+              </button>
+              {superFreteIntegration?.connected && (
+                <button type="button" onClick={handleDisconnectSuperFrete} disabled={isSavingSuperFrete} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">
+                  Desconectar
+                </button>
+              )}
+            </div>
+          </form>
           </div>
         </section>
       ) : (

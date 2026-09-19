@@ -11,7 +11,7 @@ interface NewsletterProps {
 
 export function Newsletter({
   title = "Receba novidades no seu e-mail",
-  description = "Cadastre-se e ganhe 10% de desconto na primeira compra. Prometemos só enviar coisas lindas!",
+  description = "Cadastre-se para receber novidades. Prometemos só enviar coisas lindas!",
   className = "",
 }: NewsletterProps) {
   const [email, setEmail] = useState("");

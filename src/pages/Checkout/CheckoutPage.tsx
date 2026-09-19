@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/Button/Button";
 import { useCart } from "../../contexts/CartContext";
-import { getImageUrl } from "../../services/api";
-import { formatCurrency } from "../../utils/currency";
+import { getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
+import { formatCurrency, formatCurrencyReal } from "../../utils/currency";
 import { useAuth } from "../../contexts/AuthContext";
 import { getCurrentUser, type User } from "../../services/users";
 import {
@@ -30,36 +30,12 @@ const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
 
 if (mercadoPagoPublicKey) initMercadoPago(mercadoPagoPublicKey);
 
-const shippingOptions = [
-  {
-    id: "pac",
-    name: "PAC - Entrega Econômica",
-    description: "Entrega em 5 a 10 dias úteis",
-    price: 1590,
-    estimatedDays: "5-10 dias",
-  },
-  {
-    id: "sedex",
-    name: "SEDEX - Entrega Expressa",
-    description: "Entrega em 1 a 3 dias úteis",
-    price: 2990,
-    estimatedDays: "1-3 dias",
-  },
-  {
-    id: "retirada",
-    name: "Retirar na loja",
-    description: "Disponível em 1 dia útil",
-    price: 0,
-    estimatedDays: "1 dia",
-  },
-];
-
 const paymentMethods = [
   {
     id: "pix",
     icon: Smartphone,
     label: "PIX",
-    description: "Pagamento instantâneo com desconto de 5%",
+    description: "Pagamento instantâneo",
   },
   {
     id: "credit",
@@ -119,7 +95,10 @@ export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [shipping, setShipping] = useState(shippingOptions[0].id);
+  const [shipping, setShipping] = useState("");
+  const [shippingOptions, setShippingOptions] = useState<ShippingQuote[]>([]);
+  const [isLoadingShipping, setIsLoadingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const [payment, setPayment] = useState("pix");
   const [paymentError, setPaymentError] = useState("");
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
@@ -129,9 +108,9 @@ export function CheckoutPage() {
   const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
 
   const subtotal = getSubtotal();
-  const selectedShipping = shippingOptions.find((s) => s.id === shipping);
+  const selectedShipping = shippingOptions.find((s) => String(s.serviceId) === shipping);
   const shippingCost = selectedShipping?.price || 0;
-  const total = getTotal() + shippingCost;
+  const total = getTotal() + Math.round(shippingCost * 100);
 
   useEffect(() => {
     if (!user) return;
@@ -195,6 +174,52 @@ export function CheckoutPage() {
     }
   }, [formData, missingProfileFields, user]);
 
+  const destinationPostalCode = formData.cep.replace(/\D/g, "");
+
+  useEffect(() => {
+    setShipping("");
+    setShippingOptions([]);
+
+    if (!destinationPostalCode) {
+      setShippingError("");
+      setIsLoadingShipping(false);
+      return;
+    }
+
+    if (destinationPostalCode.length !== 8) {
+      setShippingError("Informe um CEP válido com oito dígitos para calcular o frete.");
+      setIsLoadingShipping(false);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingShipping(true);
+    setShippingError("");
+
+    void getShippingQuote(
+      destinationPostalCode,
+      items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    )
+      .then((options) => {
+        if (!active) return;
+        if (options.length === 0) {
+          setShippingError("Não encontramos opções de entrega para este CEP.");
+          return;
+        }
+        setShippingOptions(options);
+        setShipping(String(options[0].serviceId));
+      })
+      .catch((error) => {
+        if (!active) return;
+        setShippingError(error instanceof Error ? error.message : "Não foi possível calcular o frete. Verifique o CEP e tente novamente.");
+      })
+      .finally(() => {
+        if (active) setIsLoadingShipping(false);
+      });
+
+    return () => { active = false; };
+  }, [destinationPostalCode, items]);
+
   useEffect(() => {
     if (!order || order.status !== "pending_payment") return;
     const refreshOrder = async () => {
@@ -234,12 +259,17 @@ export function CheckoutPage() {
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (step === 4) return;
+    if (step === 2 && (!shipping || isLoadingShipping || shippingError)) {
+      setShippingError(shippingError || "Aguarde o cálculo do frete antes de continuar.");
+      return;
+    }
     if (step < 3) {
       setStep((prev) => prev + 1);
       return;
@@ -249,10 +279,21 @@ export function CheckoutPage() {
       setPaymentError("Entre na sua conta para finalizar a compra.");
       return;
     }
+    if (!selectedShipping || destinationPostalCode.length !== 8) {
+      setPaymentError("Selecione uma opção de frete válida antes de finalizar o pedido.");
+      return;
+    }
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
-      const createdOrder = order ?? (await createOrder(formData.email)).order;
+      const createdOrder = order ?? (await createOrder(formData.email, {
+        serviceId: selectedShipping.serviceId,
+        name: selectedShipping.name,
+        company: selectedShipping.company,
+        price: selectedShipping.price,
+        deliveryTime: selectedShipping.deliveryTime,
+        destinationPostalCode,
+      })).order;
       setOrder(createdOrder);
       // O backend limpa o carrinho ao reservar o estoque para este pedido.
       await clearCart(false);
@@ -630,6 +671,21 @@ export function CheckoutPage() {
                   >
                     Forma de envio
                   </h2>
+                  {isLoadingShipping && (
+                    <p className="mb-4 rounded-xl bg-cream px-4 py-3 text-sm text-grafite-arroxeado">
+                      Calculando as opções de frete para este CEP...
+                    </p>
+                  )}
+                  {shippingError && (
+                    <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {shippingError}
+                    </p>
+                  )}
+                  {!isLoadingShipping && !shippingError && !destinationPostalCode && (
+                    <p className="mb-4 rounded-xl bg-cream px-4 py-3 text-sm text-cinza-amarronzado">
+                      Informe o CEP de entrega para ver as opções de frete.
+                    </p>
+                  )}
                   <div
                     className="space-y-3"
                     role="radiogroup"
@@ -637,9 +693,9 @@ export function CheckoutPage() {
                   >
                     {shippingOptions.map((option) => (
                       <label
-                        key={option.id}
+                        key={option.serviceId}
                         className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          shipping === option.id
+                          shipping === String(option.serviceId)
                             ? "border-rosa-lais bg-rosa-lais/5"
                             : "border-cinza-quete hover:border-cinza-quente/50"
                         }`}
@@ -647,9 +703,10 @@ export function CheckoutPage() {
                         <input
                           type="radio"
                           name="shipping"
-                          value={option.id}
-                          checked={shipping === option.id}
-                          onChange={() => setShipping(option.id)}
+                          value={String(option.serviceId)}
+                          checked={shipping === String(option.serviceId)}
+                          onChange={() => setShipping(String(option.serviceId))}
+                          disabled={isLoadingShipping}
                           className="sr-only"
                           aria-label={option.name}
                         />
@@ -661,11 +718,11 @@ export function CheckoutPage() {
                             <span className="font-bold text-rosa-lais">
                               {option.price === 0
                                 ? "Grátis"
-                                : formatCurrency(option.price)}
+                                : formatCurrencyReal(option.price)}
                             </span>
                           </div>
                           <p className="text-sm text-cinza-amarronzado mt-1">
-                            {option.description}
+                            {option.company} · {option.deliveryTime} {option.deliveryTime === 1 ? "dia útil" : "dias úteis"}
                           </p>
                         </div>
                         <Truck
@@ -729,17 +786,6 @@ export function CheckoutPage() {
                   ))}
                 </div>
 
-                {payment === "pix" && (
-                  <div className="mt-6 p-4 bg-dourado-suave/10 border border-dourado-suave/30 rounded-xl">
-                    <p className="text-sm text-grafite-arroxeado">
-                      <strong>Desconto de 5% aplicado:</strong> Total com
-                      desconto:{" "}
-                      <span className="font-bold text-rosa-lais">
-                        {formatCurrency(Math.round(total * 0.95))}
-                      </span>
-                    </p>
-                  </div>
-                )}
                 {payment === "credit" && !order && (
                   <p className="mt-6 text-sm text-cinza-amarronzado">
                     Confirme para criar o pedido e carregar o formulário seguro do Mercado Pago.
@@ -857,31 +903,23 @@ export function CheckoutPage() {
                 <div className="flex justify-between">
                   <span className="text-cinza-amarronzado">Frete</span>
                   <span className="font-medium text-grafite-arroxeado">
-                    {shippingCost === 0
+                    {!selectedShipping
+                      ? "A calcular"
+                      : shippingCost === 0
                       ? "Grátis"
-                      : formatCurrency(shippingCost)}
+                      : formatCurrencyReal(shippingCost)}
                   </span>
                 </div>
-                {payment === "pix" && (
-                  <div className="flex justify-between text-rosa-lais font-medium">
-                    <span>Desconto PIX (5%)</span>
-                    <span>-{formatCurrency(Math.round(total * 0.05))}</span>
-                  </div>
-                )}
                 <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-2 border-t border-cinza-quete">
                   <span>Total</span>
-                  <span>
-                    {payment === "pix"
-                      ? formatCurrency(Math.round(total * 0.95))
-                      : formatCurrency(total)}
-                  </span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </div>
 
               <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                 <button
                   type="submit"
-                  disabled={isCreatingPayment || step === 4 || (payment === "credit" && Boolean(order))}
+                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || isLoadingShipping || Boolean(shippingError))) || (payment === "credit" && Boolean(order))}
                   className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
                     step < 3
                       ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
