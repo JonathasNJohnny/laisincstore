@@ -13,6 +13,7 @@ import { useCart } from "../../contexts/CartContext";
 import { getImageUrl } from "../../services/api";
 import { formatCurrency } from "../../utils/currency";
 import { useAuth } from "../../contexts/AuthContext";
+import { getCurrentUser, type User } from "../../services/users";
 import {
   ApiRequestError,
   createCardPayment,
@@ -68,6 +69,52 @@ const paymentMethods = [
   },
 ];
 
+const CHECKOUT_STORAGE_PREFIX = "laisinc_checkout_missing_fields";
+
+const emptyCheckoutForm = {
+  name: "",
+  email: "",
+  phone: "",
+  cpf: "",
+  cep: "",
+  address: "",
+  number: "",
+  complement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+};
+
+type CheckoutForm = typeof emptyCheckoutForm;
+type CheckoutField = keyof CheckoutForm;
+
+function checkoutValuesFromUser(currentUser: User): Partial<CheckoutForm> {
+  return {
+    name: currentUser.recebedor || currentUser.nome || "",
+    email: currentUser.email || "",
+    phone: currentUser.telefone || "",
+    cpf: currentUser.cpf || "",
+    cep: currentUser.cep || "",
+    address: currentUser.rua || "",
+    number: currentUser.numero || "",
+    complement: currentUser.complemento || "",
+    neighborhood: currentUser.bairro || "",
+  };
+}
+
+function checkoutStorageKey(userId: User["id"]) {
+  return `${CHECKOUT_STORAGE_PREFIX}:${userId}`;
+}
+
+function readStoredCheckoutFields(userId: User["id"]): Partial<CheckoutForm> {
+  try {
+    const stored = localStorage.getItem(checkoutStorageKey(userId));
+    return stored ? JSON.parse(stored) as Partial<CheckoutForm> : {};
+  } catch {
+    return {};
+  }
+}
+
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user } = useAuth();
@@ -78,19 +125,8 @@ export function CheckoutPage() {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    cpf: "",
-    cep: "",
-    address: "",
-    number: "",
-    complement: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-  });
+  const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
+  const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
 
   const subtotal = getSubtotal();
   const selectedShipping = shippingOptions.find((s) => s.id === shipping);
@@ -98,8 +134,66 @@ export function CheckoutPage() {
   const total = getTotal() + shippingCost;
 
   useEffect(() => {
-    if (user?.email && !formData.email) setFormData((current) => ({ ...current, email: user.email }));
-  }, [formData.email, user?.email]);
+    if (!user) return;
+
+    let active = true;
+    const fillCheckoutFromProfile = async () => {
+      try {
+        // Busca a fonte atual dos dados cadastrados para este checkout.
+        const currentUser = await getCurrentUser();
+        if (!active) return;
+
+        const profileValues = checkoutValuesFromUser(currentUser);
+        const storedValues = readStoredCheckoutFields(currentUser.id);
+        const missingFields = (Object.keys(emptyCheckoutForm) as CheckoutField[]).filter(
+          (field) => !profileValues[field],
+        );
+
+        setMissingProfileFields(missingFields);
+        setFormData((current) => {
+          const next = { ...current };
+          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach((field) => {
+            // Dados do cadastro sempre prevalecem; o navegador só completa lacunas.
+            next[field] = profileValues[field] || storedValues[field] || current[field];
+          });
+          return next;
+        });
+      } catch {
+        // O contexto ainda oferece os dados disponíveis se a atualização falhar.
+        const profileValues = checkoutValuesFromUser(user);
+        const storedValues = readStoredCheckoutFields(user.id);
+        const missingFields = (Object.keys(emptyCheckoutForm) as CheckoutField[]).filter(
+          (field) => !profileValues[field],
+        );
+        setMissingProfileFields(missingFields);
+        setFormData((current) => {
+          const next = { ...current };
+          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach((field) => {
+            next[field] = profileValues[field] || storedValues[field] || current[field];
+          });
+          return next;
+        });
+      }
+    };
+
+    void fillCheckoutFromProfile();
+    return () => { active = false; };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !missingProfileFields.length) return;
+
+    const missingValues = Object.fromEntries(
+      missingProfileFields
+        .filter((field) => formData[field].trim())
+        .map((field) => [field, formData[field]]),
+    );
+    try {
+      localStorage.setItem(checkoutStorageKey(user.id), JSON.stringify(missingValues));
+    } catch {
+      // O checkout continua funcional quando o armazenamento não está disponível.
+    }
+  }, [formData, missingProfileFields, user]);
 
   useEffect(() => {
     if (!order || order.status !== "pending_payment") return;
