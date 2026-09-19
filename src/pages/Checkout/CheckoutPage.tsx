@@ -883,20 +883,26 @@ export function CheckoutPage() {
                 {order?.status !== "paid" && pixPayment?.ticketUrl && (
                   <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>
                 )}
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => {
-                    clearCart();
-                  }}
-                  asChild
-                >
-                  <Link to="/">Voltar para a loja</Link>
-                </Button>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => {
+                      clearCart();
+                    }}
+                    asChild
+                  >
+                    <Link to="/">Voltar para a loja</Link>
+                  </Button>
+                  <Button variant="outline" size="lg" asChild>
+                    <Link to="/perfil/pedidos">Meus pedidos</Link>
+                  </Button>
+                </div>
               </section>
             )}
           </div>
 
+          {step !== 4 && (
           <aside className="lg:col-span-1">
             <div className="sticky top-24 bg-branco rounded-2xl border border-cinza-quete p-6 shadow-sm">
               <h3 className="font-serif text-lg font-bold text-roxo-profundo mb-4">
@@ -982,6 +988,7 @@ export function CheckoutPage() {
               </div>
             </div>
           </aside>
+          )}
         </form>
       </div>
     </div>

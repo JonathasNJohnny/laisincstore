@@ -1,10 +1,29 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, ArrowLeft, Truck, RotateCcw, Shield } from "lucide-react";
 import { Button } from "../../components/Button/Button";
 import { QuantitySelector } from "../../components/QuantitySelector/QuantitySelector";
 import { useCart } from "../../contexts/CartContext";
-import { formatCurrency } from "../../utils/currency";
-import { getImageUrl } from "../../services/api";
+import { formatCurrency, formatCurrencyReal } from "../../utils/currency";
+import { getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
+import { getCurrentUser } from "../../services/users";
+
+const CHECKOUT_STORAGE_PREFIX = "laisinc_checkout_missing_fields:";
+
+function getSavedCheckoutPostalCode() {
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(CHECKOUT_STORAGE_PREFIX)) continue;
+      const saved = JSON.parse(localStorage.getItem(key) || "{}") as { cep?: string };
+      const postalCode = saved.cep?.replace(/\D/g, "") || "";
+      if (postalCode.length === 8) return postalCode;
+    }
+  } catch {
+    // A consulta ao perfil será usada como alternativa.
+  }
+  return "";
+}
 
 export function CartPage() {
   const {
@@ -18,7 +37,71 @@ export function CartPage() {
 
   const subtotal = getSubtotal();
   const total = getTotal();
-  const shipping = 1590;
+  const [destinationPostalCode, setDestinationPostalCode] = useState("");
+  const [shippingOption, setShippingOption] = useState<ShippingQuote | null>(null);
+  const [isLoadingShipping, setIsLoadingShipping] = useState(true);
+  const [shippingError, setShippingError] = useState("");
+
+  useEffect(() => {
+    const savedPostalCode = getSavedCheckoutPostalCode();
+    if (savedPostalCode) {
+      setDestinationPostalCode(savedPostalCode);
+      return;
+    }
+
+    let active = true;
+    void getCurrentUser()
+      .then((currentUser) => {
+        if (!active) return;
+        setDestinationPostalCode(currentUser.cep?.replace(/\D/g, "") || "");
+      })
+      .catch(() => {
+        if (active) setDestinationPostalCode("");
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (destinationPostalCode.length !== 8) {
+      setShippingOption(null);
+      setShippingError("Não é possível calcular o frete sem um CEP de entrega.");
+      setIsLoadingShipping(false);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingShipping(true);
+    setShippingError("");
+    void getShippingQuote(
+      destinationPostalCode,
+      items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    )
+      .then((options) => {
+        if (!active) return;
+        const lowestPrice = options.reduce<ShippingQuote | null>(
+          (lowest, option) => !lowest || option.price < lowest.price ? option : lowest,
+          null,
+        );
+        if (!lowestPrice) {
+          setShippingOption(null);
+          setShippingError("Não foi possível calcular o frete para este CEP.");
+          return;
+        }
+        setShippingOption(lowestPrice);
+      })
+      .catch(() => {
+        if (!active) return;
+        setShippingOption(null);
+        setShippingError("Não foi possível calcular o frete para este CEP.");
+      })
+      .finally(() => {
+        if (active) setIsLoadingShipping(false);
+      });
+
+    return () => { active = false; };
+  }, [destinationPostalCode, items]);
+
+  const estimatedTotal = shippingOption ? total + Math.round(shippingOption.price * 100) : total;
 
   if (items.length === 0) {
     return (
@@ -169,12 +252,26 @@ export function CartPage() {
                       Frete estimado
                     </span>
                     <span className="font-medium text-grafite-arroxeado">
-                      {formatCurrency(shipping)}
+                      {isLoadingShipping
+                        ? "Calculando..."
+                        : shippingOption
+                          ? formatCurrencyReal(shippingOption.price)
+                          : "Não disponível"}
                     </span>
                   </div>
+                  {shippingOption && (
+                    <p className="text-xs text-cinza-amarronzado">
+                      {shippingOption.name} · {shippingOption.company}
+                    </p>
+                  )}
+                  {!isLoadingShipping && shippingError && (
+                    <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                      {shippingError}
+                    </p>
+                  )}
                   <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-3 border-t border-cinza-quete">
                     <span>Total</span>
-                    <span>{formatCurrency(total + shipping)}</span>
+                    <span>{shippingOption ? formatCurrency(estimatedTotal) : "A calcular"}</span>
                   </div>
                 </div>
 
