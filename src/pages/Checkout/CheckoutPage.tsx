@@ -104,6 +104,7 @@ export function CheckoutPage() {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixCopied, setPixCopied] = useState(false);
   const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
   const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
 
@@ -111,6 +112,8 @@ export function CheckoutPage() {
   const selectedShipping = shippingOptions.find((s) => String(s.serviceId) === shipping);
   const shippingCost = selectedShipping?.price || 0;
   const total = getTotal() + Math.round(shippingCost * 100);
+  const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
+  const paymentTotal = order ? Number(order.total_amount) : total / 100;
 
   useEffect(() => {
     if (!user) return;
@@ -304,6 +307,7 @@ export function CheckoutPage() {
         return;
       }
 
+      setPixCopied(false);
       setPixPayment(await createPixPayment(createdOrder.id));
       setStep(4);
     } catch (error) {
@@ -345,6 +349,12 @@ export function CheckoutPage() {
     } finally {
       setIsCreatingPayment(false);
     }
+  };
+
+  const copyPixCode = async () => {
+    if (!pixCode) return;
+    await navigator.clipboard.writeText(pixCode);
+    setPixCopied(true);
   };
 
   const steps = [
@@ -830,9 +840,14 @@ export function CheckoutPage() {
                     ? "Pagamento realizado com Pix. Obrigada pela compra!"
                     : "Seu pagamento está pendente. A confirmação é atualizada automaticamente."}
                 </p>
-                {order?.status !== "paid" && pixPayment?.qrCode ? (
+                {order?.status !== "paid" && (
+                  <p className="mb-5 text-lg font-semibold text-roxo-profundo">
+                    Valor a pagar: {formatCurrencyReal(paymentTotal)}
+                  </p>
+                )}
+                {order?.status !== "paid" && pixCode ? (
                   <div className="mx-auto mb-6 flex h-56 w-56 items-center justify-center rounded-xl border border-cinza-quente bg-branco p-3">
-                    <QRCodeSVG value={pixPayment.qrCode} size={200} level="M" includeMargin />
+                    <QRCodeSVG value={pixCode} size={200} level="M" includeMargin />
                   </div>
                 ) : order?.status !== "paid" && pixPayment?.qrCodeBase64 && (
                   <img
@@ -843,10 +858,27 @@ export function CheckoutPage() {
                     className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
                   />
                 )}
-                {order?.status !== "paid" && pixPayment?.qrCode && (
-                  <button type="button" onClick={() => void navigator.clipboard.writeText(pixPayment.qrCode!)} className="mb-4 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado">
-                    Copiar código Pix
-                  </button>
+                {order?.status !== "paid" && pixCode && (
+                  <div className="mx-auto mb-6 max-w-lg text-left">
+                    <label htmlFor="pix-copy-paste" className="mb-2 block text-sm font-semibold text-grafite-arroxeado">
+                      Pix copia e cola
+                    </label>
+                    <textarea
+                      id="pix-copy-paste"
+                      value={pixCode}
+                      readOnly
+                      rows={4}
+                      className="w-full resize-none rounded-xl border border-cinza-quente bg-cream p-3 text-xs text-grafite-arroxeado"
+                    />
+                    <button type="button" onClick={() => void copyPixCode()} className="mt-3 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado">
+                      {pixCopied ? "Código Pix copiado" : "Copiar código Pix"}
+                    </button>
+                  </div>
+                )}
+                {order?.status !== "paid" && !pixCode && !pixPayment?.qrCodeBase64 && (
+                  <p role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    Não foi possível carregar os dados do Pix. Tente gerar o pagamento novamente.
+                  </p>
                 )}
                 {order?.status !== "paid" && pixPayment?.ticketUrl && (
                   <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>

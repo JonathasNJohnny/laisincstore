@@ -151,6 +151,27 @@ export interface PixPayment {
   ticketUrl?: string;
 }
 
+interface PixPaymentApiResponse {
+  id?: number | string;
+  paymentId?: string;
+  payment_id?: string;
+  status?: PixPayment["status"];
+  qrCode?: string;
+  qr_code?: string;
+  qrCodeBase64?: string;
+  qr_code_base64?: string;
+  ticketUrl?: string;
+  ticket_url?: string;
+  payment?: PixPaymentApiResponse;
+  point_of_interaction?: {
+    transaction_data?: {
+      qr_code?: string;
+      qr_code_base64?: string;
+      ticket_url?: string;
+    };
+  };
+}
+
 export interface CartItemResponse {
   productId: number | string;
   quantity: number;
@@ -208,10 +229,21 @@ export function removeCartItem(productId: number | string) {
 }
 
 export function createPixPayment(orderId: number | string) {
-  return integrationRequest<PixPayment>("/api/payments/pix", {
+  return integrationRequest<PixPaymentApiResponse>("/api/payments/pix", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ orderId }),
+  }).then((response) => {
+    const payment = response.payment ?? response;
+    const transactionData = payment.point_of_interaction?.transaction_data;
+    return {
+      id: payment.id ?? orderId,
+      paymentId: payment.paymentId ?? payment.payment_id ?? String(payment.id ?? orderId),
+      status: payment.status ?? "pending",
+      qrCode: payment.qrCode ?? payment.qr_code ?? transactionData?.qr_code,
+      qrCodeBase64: payment.qrCodeBase64 ?? payment.qr_code_base64 ?? transactionData?.qr_code_base64,
+      ticketUrl: payment.ticketUrl ?? payment.ticket_url ?? transactionData?.ticket_url,
+    } satisfies PixPayment;
   });
 }
 
