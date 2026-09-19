@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Search, X } from "lucide-react";
 import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
-import { SearchBar } from "../../components/SearchBar/SearchBar";
 import { loadProducts } from "../../components/ProductList/ProductList";
 import { formatCurrency } from "../../utils/currency";
 import { useCart } from "../../contexts/CartContext";
@@ -18,7 +18,6 @@ const SORT_OPTIONS = [
 export function ShopPage() {
   const { addItem } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [sortBy, setSortBy] = useState("newest");
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,15 +26,6 @@ export function ShopPage() {
 
   const searchQuery = searchParams.get("search") || "";
   const categoryParam = searchParams.get("category") || "";
-
-  useEffect(() => {
-    if (categoryParam) {
-      setSelectedCategory(categoryParam);
-    }
-    if (searchQuery) {
-      // Search is handled in filteredProducts
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -75,8 +65,8 @@ export function ShopPage() {
       );
     }
 
-    if (selectedCategory) {
-      result = result.filter((p) => p.category === selectedCategory);
+    if (categoryParam) {
+      result = result.filter((product) => product.category === categoryParam);
     }
 
     result = result.filter(
@@ -103,17 +93,23 @@ export function ShopPage() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, priceRange, sortBy]);
+  }, [products, searchQuery, categoryParam, priceRange, sortBy]);
+
+  const updateFilterParam = (name: "search" | "category", value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value.trim()) next.set(name, value);
+    else next.delete(name);
+    setSearchParams(next, { replace: true });
+  };
 
   const handleClearFilters = () => {
-    setSelectedCategory("");
     setPriceRange([0, 50000]);
     setSortBy("newest");
     setSearchParams({});
   };
 
   const hasActiveFilters =
-    selectedCategory ||
+    categoryParam ||
     priceRange[0] > 0 ||
     priceRange[1] < 50000 ||
     searchQuery;
@@ -135,111 +131,52 @@ export function ShopPage() {
       </section>
 
       <section className="container py-8 lg:py-12">
-        <div className="flex flex-col lg:flex-row lg:items-end gap-6 lg:gap-8">
-          <div className="flex-1 lg:w-1/4">
-            <div className="bg-branco rounded-2xl border border-cinza-quente p-6 lg:p-8 sticky top-24 space-y-6">
-              <SearchBar variant="page" placeholder="Buscar produtos..." />
-
-              <div>
-                <label
-                  htmlFor="category-filter"
-                  className="block text-sm font-medium text-grafite-arroxeado mb-2"
-                >
-                  Categorias
-                </label>
-                <select
-                  id="category-filter"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-branco border border-cinza-quente rounded-xl text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais focus:border-transparent"
-                >
-                  <option value="">Todas as categorias</option>
-                  {allCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-grafite-arroxeado mb-2">
-                  Preço: {formatCurrency(priceRange[0])} -{" "}
-                  {formatCurrency(priceRange[1])}
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="0"
-                    max="50000"
-                    step="1000"
-                    value={priceRange[0]}
-                    onChange={(e) =>
-                      setPriceRange([parseInt(e.target.value), priceRange[1]])
-                    }
-                    className="flex-1 h-2 bg-cinza-quente rounded-lg appearance-none accent-rosa-lais"
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="50000"
-                    step="1000"
-                    value={priceRange[1]}
-                    onChange={(e) =>
-                      setPriceRange([priceRange[0], parseInt(e.target.value)])
-                    }
-                    className="flex-1 h-2 bg-cinza-quente rounded-lg appearance-none accent-rosa-lais"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="sort-filter"
-                  className="block text-sm font-medium text-grafite-arroxeado mb-2"
-                >
-                  Ordenar por
-                </label>
-                <select
-                  id="sort-filter"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-branco border border-cinza-quente rounded-xl text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais focus:border-transparent"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={handleClearFilters}
-                  className="w-full text-sm text-rosa-lais hover:text-roxo-profundo font-medium flex items-center justify-center gap-1"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                  Limpar filtros
-                </button>
-              )}
+        <div className="rounded-2xl border border-cinza-quente bg-branco p-5 shadow-sm lg:p-6">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(180px,0.8fr)_minmax(180px,0.8fr)]">
+            <div className="relative">
+              <label htmlFor="shop-search" className="mb-2 block text-sm font-medium text-grafite-arroxeado">Buscar produtos</label>
+              <Search className="pointer-events-none absolute bottom-3 left-3 h-5 w-5 text-cinza-amarronzado" aria-hidden="true" />
+              <input
+                id="shop-search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => updateFilterParam("search", event.target.value)}
+                placeholder="Nome, categoria ou descrição"
+                className="w-full rounded-xl border border-cinza-quente bg-branco py-3 pl-10 pr-10 text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais"
+              />
+              {searchQuery && <button type="button" onClick={() => updateFilterParam("search", "")} className="absolute bottom-3 right-3 text-cinza-amarronzado hover:text-rosa-lais" aria-label="Limpar busca"><X className="h-5 w-5" /></button>}
+            </div>
+            <div>
+              <label htmlFor="category-filter" className="mb-2 block text-sm font-medium text-grafite-arroxeado">Categoria</label>
+              <select id="category-filter" value={categoryParam} onChange={(event) => updateFilterParam("category", event.target.value)} className="w-full rounded-xl border border-cinza-quente bg-branco px-4 py-3 text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais">
+                <option value="">Todas as categorias</option>
+                {allCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="sort-filter" className="mb-2 block text-sm font-medium text-grafite-arroxeado">Ordenar por</label>
+              <select id="sort-filter" value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="w-full rounded-xl border border-cinza-quente bg-branco px-4 py-3 text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais">
+                {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
             </div>
           </div>
+          <div className="mt-5 flex flex-col gap-3 border-t border-cinza-quente pt-5 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-2 block text-sm font-medium text-grafite-arroxeado">Preço: {formatCurrency(priceRange[0])} — {formatCurrency(priceRange[1])}</label>
+              <div className="flex items-center gap-3">
+                <input type="range" min="0" max="50000" step="1000" value={priceRange[0]} onChange={(event) => setPriceRange([Math.min(Number(event.target.value), priceRange[1]), priceRange[1]])} className="h-2 flex-1 appearance-none rounded-lg bg-cinza-quente accent-rosa-lais" aria-label="Preço mínimo" />
+                <input type="range" min="0" max="50000" step="1000" value={priceRange[1]} onChange={(event) => setPriceRange([priceRange[0], Math.max(Number(event.target.value), priceRange[0])])} className="h-2 flex-1 appearance-none rounded-lg bg-cinza-quente accent-rosa-lais" aria-label="Preço máximo" />
+              </div>
+            </div>
+            {hasActiveFilters && <button type="button" onClick={handleClearFilters} className="inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-sm font-medium text-rosa-lais hover:bg-rosa-lais/10"><X className="h-4 w-4" aria-hidden="true" />Limpar filtros</button>}
+          </div>
+        </div>
 
-          <div className="flex-1 lg:w-3/4 w-full self-start">
+        <div className="mt-8">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="font-serif text-2xl font-bold text-roxo-profundo">Produtos</h2>
+            <span className="text-sm text-cinza-amarronzado">{filteredProducts.length} {filteredProducts.length === 1 ? "produto encontrado" : "produtos encontrados"}</span>
+          </div>
             <ProductGrid
               products={filteredProducts}
               variant="compact"
@@ -251,16 +188,6 @@ export function ShopPage() {
                   : "Nenhum produto encontrado com os filtros selecionados")
               }
             />
-            <div className="flex justify-end mb-6 mt-2 mr-2">
-              <div className="flex items-center gap-2 text-left">
-                <span className="text-sm text-cinza-amarronzado">
-                  {filteredProducts.length}{" "}
-                  {filteredProducts.length === 1 ? "produto" : "produtos"}{" "}
-                  encontrado{filteredProducts.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>
