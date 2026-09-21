@@ -472,7 +472,55 @@ export function getImageUrl(imageUrl?: string | null): string {
     return imageUrl;
   }
 
+  // Uploads são expostos pela própria aplicação. Mantê-los relativos evita que
+  // o navegador bloqueie a imagem quando a API estiver em outra origem.
+  if (imageUrl.startsWith("/uploads/")) {
+    return imageUrl;
+  }
+
   return `${API_URL}/${imageUrl.replace(/^\/+/, "")}`;
+}
+
+export interface AboutMe {
+  id?: number | string;
+  pfp?: string | null;
+  mini_title: string;
+  title: string;
+  about_me: string;
+  second_title: string;
+  twt_title: string;
+  twt_text: string;
+  ytb_title: string;
+  ytb_text: string;
+  last_text: string;
+}
+
+function unwrapAboutMe(data: AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe }): AboutMe {
+  if ("aboutme" in data && data.aboutme) return data.aboutme;
+  if ("aboutMe" in data && data.aboutMe) return data.aboutMe;
+  return data as AboutMe;
+}
+
+export async function getAboutMe(): Promise<AboutMe> {
+  const response = await fetch(`${API_URL}/api/aboutme`);
+  if (!response.ok) throw new Error("Não foi possível carregar o conteúdo sobre nós.");
+  return unwrapAboutMe(await response.json() as AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe });
+}
+
+export async function updateAboutMe(formData: FormData): Promise<AboutMe> {
+  const response = await fetch(`${API_URL}/api/aboutme`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: formData,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = data && typeof data === "object" && "message" in data && typeof data.message === "string"
+      ? data.message
+      : "Não foi possível salvar o conteúdo sobre nós.";
+    throw new Error(message);
+  }
+  return unwrapAboutMe(data as AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe });
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductResponse> {

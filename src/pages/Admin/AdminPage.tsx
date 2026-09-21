@@ -112,7 +112,6 @@ export function AdminPage() {
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState("");
   const [isSavingBanner, setIsSavingBanner] = useState(false);
-
   const isAdmin = user?.admin === true;
   const categoryOptions = Array.from(
     new Set(
