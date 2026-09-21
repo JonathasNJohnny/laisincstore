@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Em produção, esta rota é do mesmo domínio da loja e não depende de CORS.
-const rankingUrl = "/Ranking/getMonthlyRanking";
+const rankingUrl = "https://laisinc.com.br/Ranking/getMonthlyRanking";
 
 const months = [
   "Janeiro",
