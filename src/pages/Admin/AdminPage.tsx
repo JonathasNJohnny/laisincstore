@@ -1,9 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import {
   createProduct,
+  createHeroBanner,
+  deleteHeroBanner,
+  getAdminHeroBanners,
   deleteProduct,
   getProducts,
+  getHeroBannerImageUrl,
+  type HeroBanner,
+  updateHeroBanner,
   updateProduct,
 } from "../../services/api";
 import {
@@ -21,6 +27,7 @@ import {
 } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatCurrencyReal } from "../../utils/currency";
+import { invalidateProductsCache } from "../../components/ProductList/ProductList";
 
 interface ProductFormState {
   id?: number;
@@ -34,6 +41,27 @@ interface ProductFormState {
   active: boolean;
   order: boolean;
 }
+
+interface SavedImage {
+  id: number | string;
+  url: string;
+  name: string;
+}
+
+interface BannerFormState {
+  id?: number | string;
+  imageUrl: string;
+  redirectLink: string;
+  active: boolean;
+  position: string;
+}
+
+const emptyBannerForm: BannerFormState = {
+  imageUrl: "",
+  redirectLink: "",
+  active: true,
+  position: "0",
+};
 
 const emptyForm: ProductFormState = {
   name: "",
@@ -50,7 +78,7 @@ const emptyForm: ProductFormState = {
 export function AdminPage() {
   const { user, loading: loadingAuth } = useAuth();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"products" | "payment" | "orders">(() =>
+  const [activeTab, setActiveTab] = useState<"products" | "banners" | "payment" | "orders">(() =>
     searchParams.has("mercadoPago") ? "payment" : "products",
   );
   const [integration, setIntegration] = useState<MercadoPagoIntegration | null>(null);
@@ -66,13 +94,24 @@ export function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [savedImages, setSavedImages] = useState<SavedImage[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [expandedImage, setExpandedImage] = useState<SavedImage | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState("");
+  const [banners, setBanners] = useState<HeroBanner[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [bannerError, setBannerError] = useState("");
+  const [bannerForm, setBannerForm] = useState<BannerFormState>(emptyBannerForm);
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [isSavingBanner, setIsSavingBanner] = useState(false);
 
   const isAdmin = user?.admin === true;
   const categoryOptions = Array.from(
@@ -107,6 +146,41 @@ export function AdminPage() {
 
     loadProducts();
   }, [activeTab, isAdmin]);
+
+  const loadBanners = async () => {
+    setLoadingBanners(true);
+    setBannerError("");
+    try {
+      const data = await getAdminHeroBanners();
+      setBanners(data.slice().sort((first, second) => Number(first.position ?? 0) - Number(second.position ?? 0)));
+    } catch (error) {
+      setBannerError(error instanceof Error ? error.message : "Não foi possível carregar os banners.");
+    } finally {
+      setLoadingBanners(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "banners") return;
+    void loadBanners();
+  }, [activeTab, isAdmin]);
+
+  useEffect(() => {
+    if (!bannerImage) {
+      setBannerPreview("");
+      return;
+    }
+    const preview = URL.createObjectURL(bannerImage);
+    setBannerPreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [bannerImage]);
+
+  useEffect(() => {
+    const previews = images.map((image) => URL.createObjectURL(image));
+    setImagePreviews(previews);
+
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [images]);
 
   const loadIntegration = async () => {
     setLoadingIntegration(true);
@@ -222,10 +296,99 @@ export function AdminPage() {
     }
   };
 
+  const resetBannerForm = () => {
+    setBannerForm(emptyBannerForm);
+    setBannerImage(null);
+    setBannerError("");
+  };
+
+  const handleBannerSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const position = Number(bannerForm.position);
+    if (!Number.isInteger(position) || position < 0) {
+      setBannerError("Informe uma posição inteira igual ou maior que zero.");
+      return;
+    }
+    if (!bannerImage && !bannerForm.imageUrl.trim() && !bannerForm.id) {
+      setBannerError("Envie uma imagem ou informe a URL da imagem.");
+      return;
+    }
+
+    setIsSavingBanner(true);
+    setBannerError("");
+    try {
+      const payload = new FormData();
+      if (bannerImage) payload.append("image", bannerImage);
+      if (bannerForm.imageUrl.trim()) payload.append("image_url", bannerForm.imageUrl.trim());
+      payload.append("redirect_link", bannerForm.redirectLink.trim());
+      payload.append("active", bannerForm.active ? "1" : "0");
+      payload.append("position", String(position));
+
+      if (bannerForm.id) {
+        await updateHeroBanner(bannerForm.id, payload);
+      } else {
+        await createHeroBanner(payload);
+      }
+      resetBannerForm();
+      await loadBanners();
+    } catch (error) {
+      setBannerError(error instanceof Error ? error.message : "Não foi possível salvar o banner.");
+    } finally {
+      setIsSavingBanner(false);
+    }
+  };
+
+  const handleEditBanner = (banner: HeroBanner) => {
+    setBannerForm({
+      id: banner.id,
+      imageUrl: banner.image_url ?? banner.image ?? "",
+      redirectLink: banner.redirect_link ?? "",
+      active: banner.active !== 0 && banner.active !== false && banner.active !== "0",
+      position: String(banner.position ?? 0),
+    });
+    setBannerImage(null);
+    setBannerError("");
+  };
+
+  const handleDeleteBanner = async (id: number | string) => {
+    if (!window.confirm("Deseja realmente excluir este banner?")) return;
+    try {
+      await deleteHeroBanner(id);
+      if (String(bannerForm.id) === String(id)) resetBannerForm();
+      await loadBanners();
+    } catch (error) {
+      setBannerError(error instanceof Error ? error.message : "Não foi possível excluir o banner.");
+    }
+  };
+
   const resetForm = () => {
     setForm(emptyForm);
-    setImage(null);
+    setImages([]);
+    setSavedImages([]);
+    setExpandedImage(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
     setSubmitError("");
+  };
+
+  const addImages = (files: FileList | null) => {
+    if (!files?.length) return;
+    const selectedFiles = Array.from(files);
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    if (selectedFiles.some((file) => !allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024)) {
+      setSubmitError("Use imagens JPG, PNG, WEBP ou GIF de até 5 MB.");
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      return;
+    }
+
+    setImages((current) => {
+      const next = [...current, ...selectedFiles].slice(0, Math.max(0, 10 - savedImages.length));
+      if (savedImages.length + current.length + selectedFiles.length > 10) {
+        setSubmitError("Cada produto pode ter no máximo 10 imagens.");
+      }
+      return next;
+    });
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -250,9 +413,7 @@ export function AdminPage() {
       payload.append("active", form.active ? "1" : "0");
       payload.append("order", form.order ? "1" : "0");
 
-      if (image) {
-        payload.append("image", image);
-      }
+      images.forEach((image) => payload.append("images", image));
 
       if (form.id) {
         await updateProduct(form.id, payload);
@@ -260,6 +421,7 @@ export function AdminPage() {
         await createProduct(payload);
       }
 
+      invalidateProductsCache();
       const refreshed = await getProducts({ includeInactive: true });
       setProducts(refreshed);
       resetForm();
@@ -287,7 +449,23 @@ export function AdminPage() {
       active: Boolean(Number(product.active ?? 1)),
       order: Boolean(Number(product.order ?? 0)),
     });
-    setImage(null);
+    setImages([]);
+    const uploadedImages = (product.uploads ?? [])
+      .slice()
+      .sort((first: { position?: number }, second: { position?: number }) => (first.position ?? 0) - (second.position ?? 0))
+      .map((upload: { id: number | string; url: string }, index: number) => ({
+        id: upload.id,
+        url: upload.url,
+        name: `Imagem ${index + 1}`,
+      }));
+    const productImages = uploadedImages.length > 0
+      ? uploadedImages
+      : product.image_url
+        ? [{ id: "cover", url: product.image_url, name: "Imagem" }]
+        : [];
+    setSavedImages(productImages);
+    setExpandedImage(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
     setSubmitError("");
   };
 
@@ -356,6 +534,19 @@ export function AdminPage() {
           }`}
         >
           Produtos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "banners"}
+          onClick={() => setActiveTab("banners")}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "banners"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
+        >
+          Banner
         </button>
         <button
           type="button"
@@ -552,15 +743,77 @@ export function AdminPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Imagem
-              </label>
+              <span className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                Imagens
+              </span>
               <input
+                ref={imageInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={(event) => setImage(event.target.files?.[0] || null)}
-                className="w-full rounded-xl border border-dashed border-cinza-quente bg-cream px-4 py-3"
+                multiple
+                onChange={(event) => addImages(event.target.files)}
+                className="sr-only"
               />
+              <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-cinza-quente bg-cream p-3">
+                {savedImages.map((image) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={() => setExpandedImage(image)}
+                    className="group relative h-24 w-24 overflow-hidden rounded-lg border-2 border-dourado-suave bg-branco shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                    aria-label={`Ampliar ${image.name}`}
+                  >
+                    <img
+                      src={getImageUrl(image.url)}
+                      alt=""
+                      crossOrigin="anonymous"
+                      className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                    />
+                  </button>
+                ))}
+                {images.map((image, index) => (
+                  <div
+                    key={`${image.name}-${image.lastModified}-${index}`}
+                    className="group relative h-24 w-24 overflow-hidden rounded-lg border border-cinza-quente bg-branco shadow-sm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedImage({ id: `new-${index}`, url: imagePreviews[index] ?? "", name: image.name })}
+                      className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rosa-lais"
+                      aria-label={`Ampliar ${image.name}`}
+                    >
+                      <img
+                        src={imagePreviews[index]}
+                        alt={image.name}
+                        className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImages((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-roxo-profundo/85 text-lg leading-none text-branco shadow-sm transition hover:bg-rosa-lais focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-1"
+                      aria-label={`Remover ${image.name}`}
+                      title={`Remover ${image.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {savedImages.length + images.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="flex h-10 min-w-10 items-center justify-center rounded-lg border border-rosa-lais bg-branco px-3 text-xl font-medium text-rosa-lais transition hover:bg-rosa-lais/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                    aria-label="Adicionar outra imagem"
+                    title="Adicionar outra imagem"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-cinza-amarronzado">
+                Adicione até 10 imagens (JPG, PNG, WEBP ou GIF; máximo de 5 MB cada).
+              </p>
             </div>
 
             {submitError && (
@@ -673,6 +926,136 @@ export function AdminPage() {
           )}
         </section>
       </div>
+      ) : activeTab === "banners" ? (
+        <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1fr_1fr]">
+          <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
+            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
+              {bannerForm.id ? "Editar banner" : "Adicionar banner"}
+            </h2>
+            <form onSubmit={handleBannerSubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-image">
+                  Imagem do banner
+                </label>
+                <input
+                  id="banner-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(event) => setBannerImage(event.target.files?.[0] ?? null)}
+                  className="w-full rounded-xl border border-dashed border-cinza-quente bg-cream px-4 py-3 text-sm"
+                />
+                <p className="mt-2 text-xs text-cinza-amarronzado">
+                  Tamanho recomendado: 1920 × 1080 px (proporção 16:9).
+                </p>
+                {(bannerPreview || bannerForm.imageUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedImage({ id: "banner-preview", url: bannerPreview || bannerForm.imageUrl, name: "Banner" })}
+                    className="mt-3 block h-36 w-full overflow-hidden rounded-xl border border-cinza-quente bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                    aria-label="Ampliar prévia do banner"
+                  >
+                    <img src={getImageUrl(bannerPreview || bannerForm.imageUrl)} alt="" className="h-full w-full object-cover" />
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-image-url">
+                  URL da imagem (opcional)
+                </label>
+                <input
+                  id="banner-image-url"
+                  type="url"
+                  value={bannerForm.imageUrl}
+                  onChange={(event) => setBannerForm({ ...bannerForm, imageUrl: event.target.value })}
+                  placeholder="https://..."
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-redirect-link">
+                  Link de redirecionamento
+                </label>
+                <input
+                  id="banner-redirect-link"
+                  value={bannerForm.redirectLink}
+                  onChange={(event) => setBannerForm({ ...bannerForm, redirectLink: event.target.value })}
+                  placeholder="/produto/exemplo ou https://..."
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-position">
+                    Posição
+                  </label>
+                  <input
+                    id="banner-position"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={bannerForm.position}
+                    onChange={(event) => setBannerForm({ ...bannerForm, position: event.target.value })}
+                    className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                    required
+                  />
+                </div>
+                <label className="flex items-center gap-2 self-end rounded-xl border border-cinza-quente bg-cream px-4 py-3 text-sm text-grafite-arroxeado">
+                  <input
+                    type="checkbox"
+                    checked={bannerForm.active}
+                    onChange={(event) => setBannerForm({ ...bannerForm, active: event.target.checked })}
+                  />
+                  Banner ativo
+                </label>
+              </div>
+
+              {bannerError && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{bannerError}</p>}
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button type="submit" disabled={isSavingBanner} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
+                  {isSavingBanner ? "Salvando..." : bannerForm.id ? "Salvar alterações" : "Adicionar banner"}
+                </button>
+                <button type="button" onClick={resetBannerForm} className="rounded-xl border border-cinza-quente bg-branco px-5 py-3 font-semibold text-grafite-arroxeado">
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
+            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">Banners cadastrados</h2>
+            {loadingBanners ? (
+              <p className="text-cinza-amarronzado">Carregando banners...</p>
+            ) : banners.length === 0 ? (
+              <p className="rounded-xl bg-cream p-5 text-sm text-cinza-amarronzado">Nenhum banner cadastrado.</p>
+            ) : (
+              <div className="space-y-4">
+                {banners.map((banner) => {
+                  const active = banner.active !== 0 && banner.active !== false && banner.active !== "0";
+                  return (
+                    <article key={banner.id} className="flex gap-4 rounded-2xl border border-cinza-quente p-3">
+                      <button type="button" onClick={() => setExpandedImage({ id: banner.id, url: banner.image_url ?? banner.image ?? "", name: "Banner" })} className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais" aria-label="Ampliar banner">
+                        <img src={getHeroBannerImageUrl(banner)} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-roxo-profundo">Posição {banner.position ?? 0}</p>
+                        <p className="mt-1 truncate text-xs text-cinza-amarronzado">{banner.redirect_link || "Sem redirecionamento"}</p>
+                        <p className={`mt-2 text-xs font-semibold ${active ? "text-emerald-700" : "text-cinza-amarronzado"}`}>{active ? "Ativo" : "Inativo"}</p>
+                        <div className="mt-3 flex gap-2">
+                          <button type="button" onClick={() => handleEditBanner(banner)} className="rounded-lg border border-cinza-quente px-3 py-1.5 text-xs font-semibold text-grafite-arroxeado hover:bg-cream">Editar</button>
+                          <button type="button" onClick={() => void handleDeleteBanner(banner.id)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Excluir</button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       ) : activeTab === "payment" ? (
         <section
           role="tabpanel"
@@ -846,6 +1229,33 @@ export function AdminPage() {
             </div>
           )}
         </section>
+      )}
+
+      {expandedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-roxo-profundo/90 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Visualização ampliada de ${expandedImage.name}`}
+          onClick={() => setExpandedImage(null)}
+        >
+          <div className="relative max-h-full max-w-full" onClick={(event) => event.stopPropagation()}>
+            <img
+              src={getImageUrl(expandedImage.url)}
+              alt={expandedImage.name}
+              crossOrigin="anonymous"
+              className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+            />
+            <button
+              type="button"
+              onClick={() => setExpandedImage(null)}
+              className="absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full bg-branco text-2xl leading-none text-roxo-profundo shadow-lg transition hover:bg-rosa-lais hover:text-branco focus:outline-none focus-visible:ring-2 focus-visible:ring-branco"
+              aria-label="Fechar imagem ampliada"
+            >
+              ×
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

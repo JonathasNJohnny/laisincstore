@@ -18,7 +18,7 @@ import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
 import { SectionTitle } from "../../components/SectionTitle/SectionTitle";
 import { formatCurrency } from "../../data/products";
 import { useCart } from "../../contexts/CartContext";
-import { getProductBySlug } from "../../services/api";
+import { getImageUrl, getProductBySlug } from "../../services/api";
 import { normalizeApiProduct } from "../../components/ProductList/ProductList";
 import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
@@ -161,17 +161,38 @@ export function ProductPage() {
           <div className="space-y-4">
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-cinza-quente/50">
               <button
+                type="button"
                 onClick={() => setIsZoomed(true)}
-                className="absolute inset-0 w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
+                className="absolute inset-0 z-0 h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
                 aria-label="Ampliar imagem"
               >
-                <button onClick={() => console.log("test")}>test</button>
                 <img
-                  src={images[selectedImage]}
+                  src={getImageUrl(images[selectedImage])}
                   alt={product.name}
+                  crossOrigin="anonymous"
                   className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 />
               </button>
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleImageChange(-1)}
+                    className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-branco/85 p-2 text-roxo-profundo shadow-md transition hover:bg-branco focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                    aria-label="Imagem anterior"
+                  >
+                    <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleImageChange(1)}
+                    className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-branco/85 p-2 text-roxo-profundo shadow-md transition hover:bg-branco focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                    aria-label="Próxima imagem"
+                  >
+                    <ChevronRight className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                </>
+              )}
               {product.badge && (
                 <div className="absolute top-4 left-4 z-10">
                   <Badge type={product.badge} />
@@ -212,8 +233,9 @@ export function ProductPage() {
                   role="listitem"
                 >
                   <img
-                    src={img}
+                    src={getImageUrl(img)}
                     alt=""
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                   />
                 </button>
@@ -221,20 +243,6 @@ export function ProductPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => handleImageChange(-1)}
-                aria-label="Imagem anterior"
-              >
-                <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleImageChange(1)}
-                aria-label="Próxima imagem"
-              >
-                <ChevronRight className="w-5 h-5" aria-hidden="true" />
-              </Button>
               <Button
                 variant="ghost"
                 className="ml-auto"
@@ -479,8 +487,9 @@ export function ProductPage() {
           <ChevronLeft className="w-8 h-8" aria-hidden="true" />
         </button>
         <img
-          src={images[selectedImage]}
+          src={getImageUrl(images[selectedImage])}
           alt={product.name}
+          crossOrigin="anonymous"
           className="max-h-[80vh] max-w-[80vw] object-contain"
         />
         <button

@@ -313,12 +313,82 @@ export interface ApiProduct {
   stock?: number;
   weight_grams?: number | null;
   image_url?: string | null;
+  uploads?: Array<{
+    id: number | string;
+    product_id: number | string;
+    url: string;
+    position: number;
+  }>;
   active?: number | boolean | string;
   order?: number;
 }
 
 interface ProductsResponse {
   products?: ApiProduct[];
+}
+
+export interface HeroBanner {
+  id: number | string;
+  image_url?: string | null;
+  image?: string | null;
+  redirect_link?: string | null;
+  active?: number | boolean | string;
+  position?: number | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+function heroBannerImageUrl(banner: HeroBanner): string | null {
+  return banner.image_url ?? banner.image ?? null;
+}
+
+export function getHeroBannerImageUrl(banner: HeroBanner): string {
+  return getImageUrl(heroBannerImageUrl(banner));
+}
+
+export async function getAdminHeroBanners(): Promise<HeroBanner[]> {
+  const response = await fetch(`${API_URL}/api/hero-banners/admin`, { headers: authHeaders() });
+  if (!response.ok) throw new Error("Não foi possível carregar os banners.");
+  const data = await response.json() as HeroBanner[] | { banners?: HeroBanner[] };
+  return Array.isArray(data) ? data : data.banners ?? [];
+}
+
+export async function getHeroBanners(): Promise<HeroBanner[]> {
+  const response = await fetch(`${API_URL}/api/hero-banners`);
+  if (!response.ok) throw new Error("Não foi possível carregar os banners.");
+  const data = await response.json() as HeroBanner[] | { banners?: HeroBanner[] };
+  return (Array.isArray(data) ? data : data.banners ?? [])
+    .filter((banner) => banner.active !== 0 && banner.active !== false && banner.active !== "0")
+    .sort((first, second) => Number(first.position ?? 0) - Number(second.position ?? 0));
+}
+
+export async function createHeroBanner(formData: FormData) {
+  const response = await fetch(`${API_URL}/api/hero-banners`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData,
+  });
+  if (!response.ok) throw new Error("Não foi possível criar o banner.");
+  return response.json();
+}
+
+export async function updateHeroBanner(id: number | string, formData: FormData) {
+  const response = await fetch(`${API_URL}/api/hero-banners/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: formData,
+  });
+  if (!response.ok) throw new Error("Não foi possível atualizar o banner.");
+  return response.json();
+}
+
+export async function deleteHeroBanner(id: number | string) {
+  const response = await fetch(`${API_URL}/api/hero-banners/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error("Não foi possível excluir o banner.");
+  return response.json();
 }
 
 interface ProductResponse {

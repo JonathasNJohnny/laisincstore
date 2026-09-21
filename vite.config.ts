@@ -6,11 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api/ranking": {
-        target: "http://vps9769.integrator.host:9090",
+      "/Ranking": {
+        target: "https://laisinc.com.br",
         changeOrigin: true,
-        rewrite: (path) =>
-          path.replace(/^\/api\/ranking/, "/Ranking/getMonthlyRanking"),
       },
     },
   },

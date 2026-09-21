@@ -7,6 +7,10 @@ import { useCart } from "../../contexts/CartContext";
 
 let productsRequest: Promise<Product[]> | null = null;
 
+export function invalidateProductsCache() {
+  productsRequest = null;
+}
+
 export function normalizeApiProduct(apiProduct: {
   id: number;
   name: string;
@@ -16,11 +20,17 @@ export function normalizeApiProduct(apiProduct: {
   price: string | number;
   stock?: number;
   image_url?: string | null;
+  uploads?: Array<{ url: string; position?: number }>;
   active?: number | boolean | string;
   order?: number;
 }): Product {
   const numericPrice = Number(apiProduct.price ?? 0);
   const safePrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+  const images = (apiProduct.uploads ?? [])
+    .slice()
+    .sort((first, second) => (first.position ?? 0) - (second.position ?? 0))
+    .map((upload) => getImageUrl(upload.url));
+  const coverImage = images[0] ?? getImageUrl(apiProduct.image_url);
 
   return {
     id: String(apiProduct.id),
@@ -29,8 +39,8 @@ export function normalizeApiProduct(apiProduct: {
     category: apiProduct.category || "Sem categoria",
     description: apiProduct.description || "Produto da Laís Inc.",
     price: Math.round(safePrice * 100),
-    image: getImageUrl(apiProduct.image_url),
-    images: [getImageUrl(apiProduct.image_url)],
+    image: coverImage,
+    images,
     badge:
       apiProduct.active === 1 || apiProduct.order === 0 ? "Novo" : undefined,
     stock: Number(apiProduct.stock ?? 0),

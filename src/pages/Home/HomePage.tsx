@@ -9,11 +9,13 @@ import { slugify } from "../../utils/slugify";
 import type { Category } from "../../types";
 import type { Product } from "../../types";
 import { useCart } from "../../contexts/CartContext";
+import { getHeroBanners, type HeroBanner } from "../../services/api";
 
 export function HomePage() {
   const { addItem } = useCart();
   const [liveProducts, setLiveProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -35,6 +37,20 @@ export function HomePage() {
 
     fetchProducts();
 
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getHeroBanners()
+      .then((banners) => {
+        if (active) setHeroBanners(banners);
+      })
+      .catch(() => {
+        if (active) setHeroBanners([]);
+      });
     return () => {
       active = false;
     };
@@ -66,7 +82,7 @@ export function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero banners={heroBanners} />
 
       <section
         className="container py-12 lg:py-16"
