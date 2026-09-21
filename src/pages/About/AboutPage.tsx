@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check, Heart, Pencil, Sparkles } from "lucide-react";
 import laisPfp from "../../assets/lais_pfp.png";
 import {
+  createAboutMe,
   getAboutMe,
   getImageUrl,
   updateAboutMe,
@@ -52,6 +53,17 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
+const inputClass = "w-full rounded-lg border border-rosa-lais/40 bg-branco px-3 py-2 font-inherit text-inherit outline-none focus:border-rosa-lais focus:ring-2 focus:ring-rosa-lais/20";
+
+function EditableField({ content, editing, field, label, multiline = false, onChange, rows = 4 }: {
+  content: AboutMe; editing: boolean; field: TextField; label: string; multiline?: boolean; rows?: number;
+  onChange: (field: TextField, value: string) => void;
+}) {
+  if (!editing) return <>{content[field]}</>;
+  if (multiline) return <textarea aria-label={label} value={content[field]} rows={rows} onChange={(event) => onChange(field, event.target.value)} className={inputClass} />;
+  return <input aria-label={label} value={content[field]} onChange={(event) => onChange(field, event.target.value)} className={inputClass} />;
+}
+
 export function AboutPage() {
   const { user } = useAuth();
   const isAdmin = user?.admin === true;
@@ -62,14 +74,16 @@ export function AboutPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [aboutExists, setAboutExists] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getAboutMe()
       .then((data) => {
-        const content = { ...defaultAbout, ...data };
+        const content = { ...defaultAbout, ...(data ?? {}) };
         setAbout(content);
         setDraft(content);
+        setAboutExists(data !== null);
       })
       .catch(() => undefined);
   }, []);
@@ -83,9 +97,6 @@ export function AboutPage() {
 
   const changeField = (field: TextField, value: string) =>
     setDraft((current) => ({ ...current, [field]: value }));
-  const inputClass =
-    "w-full rounded-lg border border-rosa-lais/40 bg-branco px-3 py-2 font-inherit text-inherit outline-none focus:border-rosa-lais focus:ring-2 focus:ring-rosa-lais/20";
-
   const toggleEditing = async () => {
     if (!editing) {
       setDraft(about);
@@ -95,15 +106,22 @@ export function AboutPage() {
       setEditing(true);
       return;
     }
+    const hasTextChanges = textFields.some((field) => draft[field] !== about[field]);
+    if (!photo && aboutExists && !hasTextChanges) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       const payload = new FormData();
       textFields.forEach((field) => payload.append(field, draft[field]));
       if (photo) payload.append("pfp", photo);
-      const saved = { ...defaultAbout, ...(await updateAboutMe(payload)) };
+      const request = aboutExists ? updateAboutMe : createAboutMe;
+      const saved = { ...defaultAbout, ...(await request(payload)) };
       setAbout(saved);
       setDraft(saved);
+      setAboutExists(true);
       setPhoto(null);
       setPhotoPreview("");
       setEditing(false);
@@ -121,38 +139,6 @@ export function AboutPage() {
   const content = editing ? draft : about;
   const imageSrc =
     photoPreview || (content.pfp ? getImageUrl(content.pfp) : laisPfp);
-  const Field = ({
-    field,
-    label,
-    multiline = false,
-    rows = 4,
-  }: {
-    field: TextField;
-    label: string;
-    multiline?: boolean;
-    rows?: number;
-  }) =>
-    editing ? (
-      multiline ? (
-        <textarea
-          aria-label={label}
-          value={content[field]}
-          rows={rows}
-          onChange={(event) => changeField(field, event.target.value)}
-          className={inputClass}
-        />
-      ) : (
-        <input
-          aria-label={label}
-          value={content[field]}
-          onChange={(event) => changeField(field, event.target.value)}
-          className={inputClass}
-        />
-      )
-    ) : (
-      <>{content[field]}</>
-    );
-
   // Obtém o hostname atual dinamicamente para o parent da Twitch
   const currentHostname =
     typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -209,14 +195,14 @@ export function AboutPage() {
             </div>
             <div className="max-w-3xl">
               <p className="mb-3 text-sm font-medium uppercase tracking-wide text-rosa-lais">
-                <Field field="mini_title" label="Mini título" />
+                <EditableField content={content} editing={editing} onChange={changeField} field="mini_title" label="Mini título" />
               </p>
               <h1 className="mb-6 font-serif text-3xl font-bold leading-tight text-roxo-profundo lg:text-4xl">
-                <Field field="title" label="Título principal" />
+                <EditableField content={content} editing={editing} onChange={changeField} field="title" label="Título principal" />
               </h1>
               <div className="space-y-5 text-lg leading-relaxed text-cinza-amarronzado">
                 {editing ? (
-                  <Field
+                  <EditableField content={content} editing={editing} onChange={changeField}
                     field="about_me"
                     label="Sobre mim"
                     multiline
@@ -245,7 +231,7 @@ export function AboutPage() {
               id="universe-title"
               className="w-full font-serif text-3xl font-bold text-roxo-profundo lg:text-4xl"
             >
-              <Field field="second_title" label="Título da segunda seção" />
+              <EditableField content={content} editing={editing} onChange={changeField} field="second_title" label="Título da segunda seção" />
             </h2>
           </div>
 
@@ -258,10 +244,10 @@ export function AboutPage() {
                   🎮
                 </p>
                 <h3 className="mb-3 font-serif text-2xl font-bold text-roxo-profundo">
-                  <Field field="twt_title" label="Título Twitch" />
+                  <EditableField content={content} editing={editing} onChange={changeField} field="twt_title" label="Título Twitch" />
                 </h3>
                 {editing ? (
-                  <Field
+                  <EditableField content={content} editing={editing} onChange={changeField}
                     field="twt_text"
                     label="Texto Twitch"
                     multiline
@@ -292,10 +278,10 @@ export function AboutPage() {
                   🎥
                 </p>
                 <h3 className="mb-3 font-serif text-2xl font-bold text-roxo-profundo">
-                  <Field field="ytb_title" label="Título YouTube" />
+                  <EditableField content={content} editing={editing} onChange={changeField} field="ytb_title" label="Título YouTube" />
                 </h3>
                 {editing ? (
-                  <Field
+                  <EditableField content={content} editing={editing} onChange={changeField}
                     field="ytb_text"
                     label="Texto YouTube"
                     multiline
@@ -323,7 +309,7 @@ export function AboutPage() {
 
           <div className="mt-12 space-y-5 text-lg leading-relaxed text-cinza-amarronzado">
             {editing ? (
-              <Field
+              <EditableField content={content} editing={editing} onChange={changeField}
                 field="last_text"
                 label="Texto final"
                 multiline

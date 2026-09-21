@@ -495,21 +495,24 @@ export interface AboutMe {
   last_text: string;
 }
 
-function unwrapAboutMe(data: AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe }): AboutMe {
+type AboutMeResponse = AboutMe | { aboutme?: AboutMe | null; aboutMe?: AboutMe | null };
+
+function unwrapAboutMe(data: AboutMeResponse): AboutMe | null {
   if ("aboutme" in data && data.aboutme) return data.aboutme;
   if ("aboutMe" in data && data.aboutMe) return data.aboutMe;
+  if (("aboutme" in data && data.aboutme === null) || ("aboutMe" in data && data.aboutMe === null)) return null;
   return data as AboutMe;
 }
 
-export async function getAboutMe(): Promise<AboutMe> {
+export async function getAboutMe(): Promise<AboutMe | null> {
   const response = await fetch(`${API_URL}/api/aboutme`);
   if (!response.ok) throw new Error("Não foi possível carregar o conteúdo sobre nós.");
-  return unwrapAboutMe(await response.json() as AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe });
+  return unwrapAboutMe(await response.json() as AboutMeResponse);
 }
 
-export async function updateAboutMe(formData: FormData): Promise<AboutMe> {
+async function saveAboutMe(method: "POST" | "PUT", formData: FormData): Promise<AboutMe> {
   const response = await fetch(`${API_URL}/api/aboutme`, {
-    method: "PUT",
+    method,
     headers: authHeaders(),
     body: formData,
   });
@@ -520,7 +523,17 @@ export async function updateAboutMe(formData: FormData): Promise<AboutMe> {
       : "Não foi possível salvar o conteúdo sobre nós.";
     throw new Error(message);
   }
-  return unwrapAboutMe(data as AboutMe | { aboutme?: AboutMe; aboutMe?: AboutMe });
+  const about = unwrapAboutMe(data as AboutMeResponse);
+  if (!about) throw new Error("A API não retornou o conteúdo sobre nós.");
+  return about;
+}
+
+export function updateAboutMe(formData: FormData): Promise<AboutMe> {
+  return saveAboutMe("PUT", formData);
+}
+
+export function createAboutMe(formData: FormData): Promise<AboutMe> {
+  return saveAboutMe("POST", formData);
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductResponse> {
