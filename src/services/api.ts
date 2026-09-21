@@ -313,7 +313,7 @@ export interface ApiProduct {
   stock?: number;
   weight_grams?: number | null;
   image_url?: string | null;
-  active?: number;
+  active?: number | boolean | string;
   order?: number;
 }
 
@@ -326,7 +326,11 @@ interface ProductResponse {
   product: ApiProduct;
 }
 
-export async function getProducts(): Promise<ApiProduct[]> {
+function isActiveProduct(product: ApiProduct): boolean {
+  return product.active !== 0 && product.active !== false && product.active !== "0";
+}
+
+export async function getProducts(options: { includeInactive?: boolean } = {}): Promise<ApiProduct[]> {
   const response = await fetch(`${API_URL}/api/products`);
 
   if (!response.ok) {
@@ -334,7 +338,11 @@ export async function getProducts(): Promise<ApiProduct[]> {
   }
 
   const data = (await response.json()) as ApiProduct[] | ProductsResponse;
-  return Array.isArray(data) ? data : (data.products ?? []);
+  const products = Array.isArray(data) ? data : (data.products ?? []);
+
+  return options.includeInactive
+    ? products
+    : products.filter(isActiveProduct);
 }
 
 export async function createProduct(formData: FormData) {
@@ -410,6 +418,10 @@ export async function getProductBySlug(slug: string): Promise<ProductResponse> {
 
   if (!data.product) {
     throw new Error("Produto nÃ£o encontrado.");
+  }
+
+  if (!isActiveProduct(data.product)) {
+    throw new Error("Produto indisponÃ­vel.");
   }
 
   return data;

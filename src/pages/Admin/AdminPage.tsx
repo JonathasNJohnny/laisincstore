@@ -96,7 +96,7 @@ export function AdminPage() {
 
     async function loadProducts() {
       try {
-        const data = await getProducts();
+        const data = await getProducts({ includeInactive: true });
         setProducts(data);
       } catch (error) {
         console.error(error);
@@ -260,7 +260,7 @@ export function AdminPage() {
         await createProduct(payload);
       }
 
-      const refreshed = await getProducts();
+      const refreshed = await getProducts({ includeInactive: true });
       setProducts(refreshed);
       resetForm();
     } catch (error) {

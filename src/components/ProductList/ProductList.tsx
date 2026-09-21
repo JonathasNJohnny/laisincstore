@@ -16,7 +16,7 @@ export function normalizeApiProduct(apiProduct: {
   price: string | number;
   stock?: number;
   image_url?: string | null;
-  active?: number;
+  active?: number | boolean | string;
   order?: number;
 }): Product {
   const numericPrice = Number(apiProduct.price ?? 0);
