@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Heart, Pencil, Sparkles } from "lucide-react";
-import laisPfp from "../../assets/lais_pfp.png";
 import {
   createAboutMe,
   getAboutMe,
@@ -12,19 +11,15 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 
 const defaultAbout: AboutMe = {
-  mini_title: "Nossa história",
-  title: "Prazer, eu sou a CEO da LaísInc",
-  about_me:
-    "Streamer cristã apaixonada por games e artesanato, decidi juntar tudo em um único cantinho e chamar de “minha empresa”.\n\nLaísInc nasceu um pouco assim: da vontade de transformar as coisas que amo fazer em algo que pudesse compartilhar com outras pessoas. Entre uma partida, linhas de crochê, ideias fluindo e algumas boas doses de caos, percebi que não precisava escolher entre as coisas que gosto, mas podia juntar tudo e criar um espaço que tivesse a minha cara.",
-  second_title: "Aqui você encontra um pouco de cada parte desse universo",
-  twt_title: "Nas lives",
-  twt_text:
-    "Tem Valorant, conversa, risadas, momentos inesperados e aquela bagunça que só acontece quando eu aperto o botão “iniciar transmissão”, mas é, acima de tudo, um lugar para se conectar com outras pessoas.",
-  ytb_title: "No YouTube",
-  ytb_text:
-    "Ficam os vlogs, bastidores, projetos, tutoriais e resumos das lives. A melhor parte é que você pode assistir sempre que quiser.",
-  last_text:
-    "Mas acima de todas essas coisas, minha fé faz parte de quem eu sou e da forma como enxergo esse projeto. Quero que esse seja um espaço leve, criativo e acolhedor, cheio de afeto em cada detalhe, onde eu possa trabalhar com aquilo que amo, mas também fazer o dia de alguém um pouco mais divertido e menos solitário.\n\nEntão… boas-vindas à LaísInc. Sinta-se à vontade para olhar a loja, interagir na live e se tornar um “funcionário” dessa empresa ou simplesmente assistir aos vídeos.\n\nEu sou A CEO e é um prazer receber você.",
+  mini_title: "",
+  title: "",
+  about_me: "",
+  second_title: "",
+  twt_title: "",
+  twt_text: "",
+  ytb_title: "",
+  ytb_text: "",
+  last_text: "",
 };
 
 type TextField = Exclude<keyof AboutMe, "id" | "pfp">;
@@ -53,15 +48,45 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
-const inputClass = "w-full rounded-lg border border-rosa-lais/40 bg-branco px-3 py-2 font-inherit text-inherit outline-none focus:border-rosa-lais focus:ring-2 focus:ring-rosa-lais/20";
+const inputClass =
+  "w-full rounded-lg border border-rosa-lais/40 bg-branco px-3 py-2 font-inherit text-inherit outline-none focus:border-rosa-lais focus:ring-2 focus:ring-rosa-lais/20";
 
-function EditableField({ content, editing, field, label, multiline = false, onChange, rows = 4 }: {
-  content: AboutMe; editing: boolean; field: TextField; label: string; multiline?: boolean; rows?: number;
+function EditableField({
+  content,
+  editing,
+  field,
+  label,
+  multiline = false,
+  onChange,
+  rows = 4,
+}: {
+  content: AboutMe;
+  editing: boolean;
+  field: TextField;
+  label: string;
+  multiline?: boolean;
+  rows?: number;
   onChange: (field: TextField, value: string) => void;
 }) {
   if (!editing) return <>{content[field]}</>;
-  if (multiline) return <textarea aria-label={label} value={content[field]} rows={rows} onChange={(event) => onChange(field, event.target.value)} className={inputClass} />;
-  return <input aria-label={label} value={content[field]} onChange={(event) => onChange(field, event.target.value)} className={inputClass} />;
+  if (multiline)
+    return (
+      <textarea
+        aria-label={label}
+        value={content[field]}
+        rows={rows}
+        onChange={(event) => onChange(field, event.target.value)}
+        className={inputClass}
+      />
+    );
+  return (
+    <input
+      aria-label={label}
+      value={content[field]}
+      onChange={(event) => onChange(field, event.target.value)}
+      className={inputClass}
+    />
+  );
 }
 
 export function AboutPage() {
@@ -106,7 +131,9 @@ export function AboutPage() {
       setEditing(true);
       return;
     }
-    const hasTextChanges = textFields.some((field) => draft[field] !== about[field]);
+    const hasTextChanges = textFields.some(
+      (field) => draft[field] !== about[field],
+    );
     if (!photo && aboutExists && !hasTextChanges) {
       setEditing(false);
       return;
@@ -138,7 +165,7 @@ export function AboutPage() {
 
   const content = editing ? draft : about;
   const imageSrc =
-    photoPreview || (content.pfp ? getImageUrl(content.pfp) : laisPfp);
+    photoPreview || (content.pfp ? getImageUrl(content.pfp) : "");
   // Obtém o hostname atual dinamicamente para o parent da Twitch
   const currentHostname =
     typeof window !== "undefined" ? window.location.hostname : "localhost";
@@ -166,11 +193,15 @@ export function AboutPage() {
           <div className="grid items-center gap-10 lg:grid-cols-[minmax(280px,380px)_1fr] lg:gap-16">
             <div className="mx-0 w-full max-w-sm justify-self-start">
               <div className="relative overflow-hidden rounded-2xl border border-cinza-quente bg-branco shadow-xl">
-                <img
-                  src={imageSrc}
-                  alt="Laís, fundadora da LaísInc"
-                  className="aspect-square w-full object-cover"
-                />
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt="Laís, fundadora da LaísInc"
+                    className="aspect-square w-full object-cover"
+                  />
+                ) : (
+                  <div className="aspect-square bg-cream" aria-hidden="true" />
+                )}
                 {editing && (
                   <>
                     <input
@@ -195,14 +226,29 @@ export function AboutPage() {
             </div>
             <div className="max-w-3xl">
               <p className="mb-3 text-sm font-medium uppercase tracking-wide text-rosa-lais">
-                <EditableField content={content} editing={editing} onChange={changeField} field="mini_title" label="Mini título" />
+                <EditableField
+                  content={content}
+                  editing={editing}
+                  onChange={changeField}
+                  field="mini_title"
+                  label="Mini título"
+                />
               </p>
               <h1 className="mb-6 font-serif text-3xl font-bold leading-tight text-roxo-profundo lg:text-4xl">
-                <EditableField content={content} editing={editing} onChange={changeField} field="title" label="Título principal" />
+                <EditableField
+                  content={content}
+                  editing={editing}
+                  onChange={changeField}
+                  field="title"
+                  label="Título principal"
+                />
               </h1>
               <div className="space-y-5 text-lg leading-relaxed text-cinza-amarronzado">
                 {editing ? (
-                  <EditableField content={content} editing={editing} onChange={changeField}
+                  <EditableField
+                    content={content}
+                    editing={editing}
+                    onChange={changeField}
                     field="about_me"
                     label="Sobre mim"
                     multiline
@@ -231,7 +277,13 @@ export function AboutPage() {
               id="universe-title"
               className="w-full font-serif text-3xl font-bold text-roxo-profundo lg:text-4xl"
             >
-              <EditableField content={content} editing={editing} onChange={changeField} field="second_title" label="Título da segunda seção" />
+              <EditableField
+                content={content}
+                editing={editing}
+                onChange={changeField}
+                field="second_title"
+                label="Título da segunda seção"
+              />
             </h2>
           </div>
 
@@ -244,10 +296,19 @@ export function AboutPage() {
                   🎮
                 </p>
                 <h3 className="mb-3 font-serif text-2xl font-bold text-roxo-profundo">
-                  <EditableField content={content} editing={editing} onChange={changeField} field="twt_title" label="Título Twitch" />
+                  <EditableField
+                    content={content}
+                    editing={editing}
+                    onChange={changeField}
+                    field="twt_title"
+                    label="Título Twitch"
+                  />
                 </h3>
                 {editing ? (
-                  <EditableField content={content} editing={editing} onChange={changeField}
+                  <EditableField
+                    content={content}
+                    editing={editing}
+                    onChange={changeField}
                     field="twt_text"
                     label="Texto Twitch"
                     multiline
@@ -278,10 +339,19 @@ export function AboutPage() {
                   🎥
                 </p>
                 <h3 className="mb-3 font-serif text-2xl font-bold text-roxo-profundo">
-                  <EditableField content={content} editing={editing} onChange={changeField} field="ytb_title" label="Título YouTube" />
+                  <EditableField
+                    content={content}
+                    editing={editing}
+                    onChange={changeField}
+                    field="ytb_title"
+                    label="Título YouTube"
+                  />
                 </h3>
                 {editing ? (
-                  <EditableField content={content} editing={editing} onChange={changeField}
+                  <EditableField
+                    content={content}
+                    editing={editing}
+                    onChange={changeField}
                     field="ytb_text"
                     label="Texto YouTube"
                     multiline
@@ -309,7 +379,10 @@ export function AboutPage() {
 
           <div className="mt-12 space-y-5 text-lg leading-relaxed text-cinza-amarronzado">
             {editing ? (
-              <EditableField content={content} editing={editing} onChange={changeField}
+              <EditableField
+                content={content}
+                editing={editing}
+                onChange={changeField}
                 field="last_text"
                 label="Texto final"
                 multiline
