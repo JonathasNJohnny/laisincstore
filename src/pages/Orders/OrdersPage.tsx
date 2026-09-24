@@ -18,6 +18,18 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function canContinuePayment(order: Order) {
+  return order.status === "pending_payment" &&
+    (!order.payment || ["rejected", "pending", "in_process"].includes(order.payment.status));
+}
+
+function rejectedPaymentMessage(statusDetail?: string | null) {
+  if (statusDetail === "cc_rejected_insufficient_amount") {
+    return "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX.";
+  }
+  return "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.";
+}
+
 export function OrdersPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +81,8 @@ export function OrdersPage() {
         <div className="mt-8 space-y-4">
           {orders.map((order) => {
             const status = statusInfo[order.status];
+            const canContinue = canContinuePayment(order);
+            const paymentIsProcessing = order.payment?.status === "pending" || order.payment?.status === "in_process";
             return <article key={order.id} className="rounded-2xl border border-cinza-quente bg-branco p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cinza-quente pb-4">
                 <div>
@@ -103,6 +117,25 @@ export function OrdersPage() {
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+              {order.payment?.status === "rejected" && (
+                <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {rejectedPaymentMessage(order.payment.statusDetail)}
+                </p>
+              )}
+              {canContinue && (
+                <div className="mt-5 rounded-xl border border-cinza-quente bg-cream/60 p-4">
+                  {paymentIsProcessing ? (
+                    <>
+                      <p className="text-sm text-cinza-amarronzado">Seu pagamento esta em processamento. Atualize a pagina em instantes antes de tentar novamente.</p>
+                      <button type="button" disabled className="mt-3 rounded-xl bg-cinza-quente px-4 py-2 text-sm font-semibold text-cinza-amarronzado">Pagamento em processamento</button>
+                    </>
+                  ) : (
+                    <Link to={`/checkout?continueOrder=${encodeURIComponent(order.id)}`} className="inline-flex rounded-xl bg-rosa-lais px-4 py-2 text-sm font-semibold text-branco">
+                      Continuar pagamento
+                    </Link>
+                  )}
                 </div>
               )}
             </article>;

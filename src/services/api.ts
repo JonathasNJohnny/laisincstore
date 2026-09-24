@@ -193,6 +193,13 @@ export interface Order {
   email: string;
   created_at?: string;
   paid_at?: string | null;
+  payment?: {
+    id: number | string;
+    method: "card" | "pix";
+    status: "pending" | "in_process" | "approved" | "rejected" | "cancelled" | "refunded";
+    statusDetail?: string | null;
+    paidAt?: string | null;
+  } | null;
   pixCopyPaste?: string | null;
   items: Array<{
     productId: number | string;
@@ -228,11 +235,11 @@ export function removeCartItem(productId: number | string) {
   });
 }
 
-export function createPixPayment(orderId: number | string) {
+export function createPixPayment(orderId: number | string, payerEmail?: string) {
   return integrationRequest<PixPaymentApiResponse>("/api/payments/pix", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId }),
+    body: JSON.stringify({ orderId, ...(payerEmail ? { payerEmail } : {}) }),
   }).then((response) => {
     const payment = response.payment ?? response;
     const transactionData = payment.point_of_interaction?.transaction_data;
@@ -291,6 +298,7 @@ export interface CardPaymentPayload {
   orderId: number | string;
   cardToken: string;
   paymentMethodId: string;
+  payerEmail: string;
   installments: number;
   issuerId?: string;
 }

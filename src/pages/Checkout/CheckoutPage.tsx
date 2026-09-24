@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Truck,
@@ -94,8 +94,10 @@ function readStoredCheckoutFields(userId: User["id"]): Partial<CheckoutForm> {
 
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loading: isAuthLoading } = useAuth();
   const { theme } = useTheme();
+  const [searchParams] = useSearchParams();
+  const continueOrderId = searchParams.get("continueOrder");
   const [step, setStep] = useState(1);
   const [shipping, setShipping] = useState("");
   const [shippingOptions, setShippingOptions] = useState<ShippingQuote[]>([]);
@@ -109,6 +111,7 @@ export function CheckoutPage() {
   const [pixCopied, setPixCopied] = useState(false);
   const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
   const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
+  const [isLoadingContinuation, setIsLoadingContinuation] = useState(Boolean(continueOrderId));
 
   const subtotal = getSubtotal();
   const selectedShipping = shippingOptions.find((s) => String(s.serviceId) === shipping);
@@ -119,6 +122,8 @@ export function CheckoutPage() {
   const orderId = order?.id;
   const orderStatus = order?.status;
   const orderTotalAmount = order?.total_amount;
+  const orderEmail = order?.email;
+  const userId = user?.id;
   const payerEmail = formData.email;
 
   useEffect(() => {
@@ -244,6 +249,68 @@ export function CheckoutPage() {
     return () => window.clearInterval(interval);
   }, [orderId, orderStatus]);
 
+  useEffect(() => {
+    if (!continueOrderId) return;
+    if (!userId) {
+      if (!isAuthLoading) setIsLoadingContinuation(false);
+      return;
+    }
+
+    let active = true;
+    setIsLoadingContinuation(true);
+    void getOrder(continueOrderId)
+      .then((response) => {
+        if (!active) return;
+        const resumedOrder = response.order;
+        setOrder(resumedOrder);
+
+        if (resumedOrder.status !== "pending_payment") {
+          setPaymentError("Este pedido nao esta disponivel para um novo pagamento.");
+          return;
+        }
+
+        const lastPayment = resumedOrder.payment;
+        if (lastPayment?.method === "pix" && lastPayment.status === "pending" && resumedOrder.pixCopyPaste) {
+          setPayment("pix");
+          setPixPayment({
+            id: lastPayment.id,
+            paymentId: String(lastPayment.id),
+            status: "pending",
+            qrCode: resumedOrder.pixCopyPaste,
+          });
+          setStep(4);
+          return;
+        }
+
+        const paymentIsProcessing = lastPayment?.status === "pending" || lastPayment?.status === "in_process";
+        if (paymentIsProcessing) {
+          setPaymentError("Seu pagamento esta em processamento. Aguarde a confirmacao antes de tentar novamente.");
+          setStep(3);
+          return;
+        }
+
+        if (lastPayment?.method === "card") {
+          setPayment("credit");
+          if (lastPayment.status === "rejected") {
+            setPaymentError(lastPayment.statusDetail === "cc_rejected_insufficient_amount"
+              ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
+              : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.");
+          }
+        } else {
+          setPayment("pix");
+        }
+        setStep(3);
+      })
+      .catch((error) => {
+        if (active) setPaymentError(error instanceof Error ? error.message : "Nao foi possivel carregar este pedido.");
+      })
+      .finally(() => {
+        if (active) setIsLoadingContinuation(false);
+      });
+
+    return () => { active = false; };
+  }, [continueOrderId, isAuthLoading, userId]);
+
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -293,7 +360,7 @@ export function CheckoutPage() {
       }
 
       setPixCopied(false);
-      setPixPayment(await createPixPayment(createdOrder.id));
+      setPixPayment(await createPixPayment(createdOrder.id, formData.email || createdOrder.email));
       setStep(4);
     } catch (error) {
       const code = error instanceof ApiRequestError ? error.code : undefined;
@@ -325,16 +392,29 @@ export function CheckoutPage() {
         orderId,
         cardToken: cardData.token,
         paymentMethodId: cardData.payment_method_id,
+        payerEmail: payerEmail || orderEmail || "",
         installments: Number(cardData.installments),
         issuerId: cardData.issuer_id || undefined,
       });
       setStep(4);
     } catch (error) {
-      setPaymentError(error instanceof Error ? error.message : "Não foi possível processar o cartão.");
+      let message = error instanceof Error ? error.message : "Nao foi possivel processar o cartao.";
+      try {
+        const response = await getOrder(orderId);
+        setOrder(response.order);
+        if (response.order.payment?.status === "rejected") {
+          message = response.order.payment.statusDetail === "cc_rejected_insufficient_amount"
+            ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
+            : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.";
+        }
+      } catch {
+        // Mantem a mensagem da tentativa original se a atualizacao do pedido falhar.
+      }
+      setPaymentError(message);
     } finally {
       setIsCreatingPayment(false);
     }
-  }, [orderId]);
+  }, [orderId, orderEmail, payerEmail]);
 
   const cardPaymentInitialization = useMemo(() => {
     if (orderTotalAmount === undefined) return undefined;
@@ -355,6 +435,25 @@ export function CheckoutPage() {
   const handleCardError = useCallback(() => {
     setPaymentError("Nao foi possivel carregar o formulario de cartao.");
   }, []);
+
+  if (isLoadingContinuation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
+        <p className="text-cinza-amarronzado">Carregando pagamento...</p>
+      </div>
+    );
+  }
+
+  if (continueOrderId && !order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
+        <div className="container max-w-lg text-center">
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{paymentError || "Nao foi possivel carregar este pagamento."}</p>
+          <Link to="/perfil/pedidos" className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco">Voltar aos pedidos</Link>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0 && !order) {
     return (
@@ -984,7 +1083,7 @@ export function CheckoutPage() {
               <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                 <button
                   type="submit"
-                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || isLoadingShipping || Boolean(shippingError))) || (payment === "credit" && Boolean(order))}
+                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || isLoadingShipping || Boolean(shippingError))) || (payment === "credit" && Boolean(order)) || order?.payment?.status === "pending" || order?.payment?.status === "in_process"}
                   className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
                     step < 3
                       ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
@@ -998,6 +1097,8 @@ export function CheckoutPage() {
                     : step === 3
                       ? isCreatingPayment
                         ? "Processando..."
+                        : order?.payment?.status === "pending" || order?.payment?.status === "in_process"
+                          ? "Pagamento em processamento"
                         : payment === "credit"
                           ? order ? "Preencha o cartão abaixo" : "Continuar para cartão"
                           : "Gerar Pix"
