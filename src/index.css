@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @font-face {
   font-family: 'Playfair Display';
   src: url('https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDXbtM.woff2') format('woff2');
@@ -56,25 +58,57 @@
   --animate-sparkle: sparkle 1.5s ease-in-out infinite;
 
   @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
   }
+
   @keyframes slideUp {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
+
   @keyframes pulseSoft {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.7;
+    }
   }
+
   @keyframes sparkle {
-    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-    50% { opacity: 1; transform: scale(1) rotate(180deg); }
+
+    0%,
+    100% {
+      opacity: 0;
+      transform: scale(0.5) rotate(0deg);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1) rotate(180deg);
+    }
   }
 }
 
 * {
   box-sizing: border-box;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 html {
@@ -91,7 +125,169 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* Modo Escuro Pastel Elegante - Variáveis Globais */
+html.dark {
+  --color-cream: #121215;
+  --color-branco: #1c1c22;
+  --color-cinza-quente: #2e2e38;
+  --color-grafite-arroxeado: #e4e4e7;
+  --color-cinza-amarronzado: #a1a1aa;
+  --color-roxo-profundo: #f4f4f5;
+  --color-azul-arroxeado: #c4b5fd;
+}
+
+html.dark body {
+  background-color: var(--color-cream);
+  color: var(--color-grafite-arroxeado);
+}
+
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  color: var(--color-roxo-profundo);
+}
+
+html.dark a {
+  color: var(--color-azul-arroxeado);
+}
+
+html.dark a:hover {
+  color: var(--color-rosa-lais);
+}
+
+/* Sobrescrita automática de classes de container e elementos no Modo Escuro */
+html.dark .bg-branco,
+html.dark .bg-white {
+  background-color: #1c1c22 !important;
+}
+
+html.dark .bg-cream {
+  background-color: #121215 !important;
+}
+
+html.dark .bg-\[\#f3f3f2\],
+html.dark .bg-\[\#fafafa\],
+html.dark .bg-\[\#fffefd\],
+html.dark .bg-gray-50,
+html.dark .bg-slate-50 {
+  background-color: #24242e !important;
+}
+
+html.dark .bg-gradient-to-br.from-cream.via-branco.to-cream {
+  background-image: linear-gradient(to bottom right, #121215, #1c1c22, #121215) !important;
+}
+
+html.dark .bg-gradient-to-b.from-cream.via-branco.to-cream {
+  background-image: linear-gradient(to bottom, #121215, #1c1c22, #121215) !important;
+}
+
+html.dark .bg-gradient-to-b.from-transparent.to-cream {
+  background-image: linear-gradient(to bottom, transparent, #121215) !important;
+}
+
+html.dark .border-cinza-quente,
+html.dark .border-\[\#d8d8e9\],
+html.dark .border-gray-200 {
+  border-color: #2e2e38 !important;
+}
+
+html.dark .text-grafite-arroxeado {
+  color: #e4e4e7 !important;
+}
+
+html.dark .text-cinza-amarronzado {
+  color: #a1a1aa !important;
+}
+
+html.dark .text-roxo-profundo {
+  color: #f4f4f5 !important;
+}
+
+html.dark .bg-roxo-profundo {
+  background-color: #160624 !important;
+}
+
+html.dark footer,
+html.dark .bg-roxo-profundo {
+  color: #ffffff;
+}
+
+html.dark footer .text-branco,
+html.dark .bg-roxo-profundo .text-branco {
+  color: #ffffff !important;
+}
+
+html.dark footer .text-branco\/70,
+html.dark .bg-roxo-profundo .text-branco\/70 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+html.dark footer .text-branco\/80,
+html.dark .bg-roxo-profundo .text-branco\/80 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html.dark footer .text-branco\/50,
+html.dark .bg-roxo-profundo .text-branco\/50 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html.dark footer .border-branco\/10,
+html.dark .bg-roxo-profundo .border-branco\/10 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Impedir que links dentro de botões mudem a cor do texto ao passar o mouse */
+button a,
+button a:hover,
+a.inline-flex,
+a.inline-flex:hover,
+a.flex,
+a.flex:hover,
+[role="button"] a,
+[role="button"] a:hover {
+  color: inherit !important;
+}
+
+
+
+/* Modo Escuro para Seção Vips do Ano e Cards Especiais */
+html.dark .bg-\[\#fff8dc\] {
+  background-color: #241c10 !important;
+}
+
+html.dark .bg-\[\#fffefd\] {
+  background-color: #1e1b26 !important;
+}
+
+html.dark .border-\[\#ead9a4\],
+html.dark .border-\[\#f0dca7\] {
+  border-color: #4a3a18 !important;
+}
+
+/* Form inputs & selects no Modo Escuro */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #24242e !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-serif);
   color: var(--color-roxo-profundo);
   font-weight: 600;
@@ -120,6 +316,7 @@ a:hover {
   color: var(--color-rosa-lais);
 }
 
+
 img {
   max-width: 100%;
   height: auto;
@@ -131,7 +328,9 @@ button {
   cursor: pointer;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -143,6 +342,7 @@ input, textarea, select {
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -206,20 +406,23 @@ input, textarea, select {
 
 /* Skeleton loading */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-cinza-quente) 25%,
-    var(--color-branco) 50%,
-    var(--color-cinza-quente) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--color-cinza-quente) 25%,
+      var(--color-branco) 50%,
+      var(--color-cinza-quente) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.5rem;
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Star sparkle decoration */

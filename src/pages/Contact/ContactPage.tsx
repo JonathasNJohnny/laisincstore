@@ -47,20 +47,20 @@ export function ContactPage() {
     {
       icon: Mail,
       title: "E-mail",
-      value: "contato@laisinc.com",
-      href: "mailto:contato@laisinc.com",
+      value: "contatolais.inc@gmail.com",
+      href: "mailto:contatolais.inc@gmail.com",
     },
     {
       icon: MapPin,
       title: "Endereço",
-      value: "São Paulo - SP, Brasil",
+      value: "Goianira - GO, Brasil",
       href: "#",
     },
     {
       icon: Phone,
       title: "WhatsApp",
-      value: "(11) 99999-9999",
-      href: "https://wa.me/5511999999999",
+      value: "+55 (62) 9 9515-2266",
+      href: "https://wa.me/5562995152266",
     },
     {
       icon: Clock,

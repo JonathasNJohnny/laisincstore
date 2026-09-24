@@ -172,7 +172,7 @@ export function ThanksPage() {
                     <div
                       className={`overflow-hidden rounded-lg border p-2 ${
                         index + 1 === currentMonth && !isClosed
-                          ? "border-rosa-lais bg-[#ffe0f1]"
+                          ? "border-rosa-lais bg-[#ffe0f1] dark:bg-transparent"
                           : "border-[#d8d8e9] bg-[#fffefd]"
                       }`}
                       key={month}
@@ -214,7 +214,7 @@ export function ThanksPage() {
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-xl border border-[#ead9a4] bg-[#fff8dc] p-3 shadow-sm">
+            <section className="rounded-xl border border-cinza-quente bg-[#f3f3f2] p-3 shadow-sm">
               <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-roxo-profundo">
                 <span aria-hidden="true">⭐</span> Vips do ano
               </h2>
@@ -226,11 +226,11 @@ export function ThanksPage() {
 
                   return usernames.map((username) => (
                     <div
-                      className="flex items-center gap-3 rounded-full border border-[#f0dca7] bg-[#fffefd] px-2 py-1 text-xs font-semibold text-roxo-profundo"
+                      className="flex items-center gap-3 rounded-full border border-cinza-quente bg-[#fffefd] px-3 py-1.5 text-xs font-semibold text-roxo-profundo"
                       key={`${month}-${username}`}
                     >
                       <span className="w-16 shrink-0">{month}</span>
-                      <span className="rounded-full bg-gradient-to-r from-[#fff3b5] to-[#e8b93f] px-3 py-1 text-[#674b00]">
+                      <span className="rounded-full bg-dourado-suave/20 text-dourado-suave px-3 py-1 font-bold">
                         <span aria-hidden="true">⭐</span> {username}
                       </span>
                     </div>

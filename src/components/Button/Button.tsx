@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary:
-        "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90 focus-visible:ring-dourado-suave shadow-sm",
+        "bg-dourado-suave text-branco hover:bg-dourado-suave/90 focus-visible:ring-dourado-suave shadow-sm",
       secondary:
         "bg-rosa-lais text-branco hover:bg-rosa-lais/90 focus-visible:ring-rosa-lais shadow-sm",
       outline:

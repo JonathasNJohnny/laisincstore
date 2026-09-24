@@ -52,6 +52,12 @@ export function SocialLinks({
     footer: "gap-4",
   };
 
+  const variantStyles = {
+    default: "bg-cinza-quente/50 text-grafite-arroxeado hover:bg-rosa-lais/10",
+    compact: "bg-cinza-quente/50 text-grafite-arroxeado hover:bg-rosa-lais/10",
+    footer: "bg-branco/10 text-branco hover:bg-rosa-lais/20 hover:text-dourado-suave",
+  };
+
   return (
     <nav
       className={`flex items-center ${gapClasses[variant]} ${className}`}
@@ -66,7 +72,7 @@ export function SocialLinks({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-cinza-quente/50 text-grafite-arroxeado transition-all duration-200 hover:bg-rosa-lais/10 ${socialColors[link.platform]} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais`}
+                className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all duration-200 ${variantStyles[variant]} ${socialColors[link.platform]} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais`}
                 aria-label={link.label}
               >
                 <Icon className={sizeClasses[variant]} aria-hidden="true" />

@@ -68,11 +68,11 @@ const socialLinks: SocialLink[] = [
 const contactInfo = [
   {
     icon: Mail,
-    label: "contato@laisinc.com",
-    href: "mailto:contato@laisinc.com",
+    label: "contatolais.inc@gmail.com",
+    href: "mailto:contatolais.inc@gmail.com",
   },
-  { icon: MapPin, label: "São Paulo - SP, Brasil", href: "#" },
-  { icon: Phone, label: "(11) 99999-9999", href: "tel:+5511999999999" },
+  { icon: MapPin, label: "Goianira - GO, Brasil", href: "#" },
+  { icon: Phone, label: "+55 (62) 9 9515-2266", href: "tel:+5562995152266" },
   { icon: Clock, label: "Seg-Sex: 9h às 18h", href: "#" },
 ];
 
@@ -80,7 +80,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-roxo-profundo text-branco" role="contentinfo">
+    <footer className="bg-roxo-profundo text-branco py-10" role="contentinfo">
       <div className="container py-12 lg:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
           <div className="lg:col-span-2 space-y-6">

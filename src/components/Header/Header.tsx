@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Search, ShoppingBag, User, Heart, LogOut } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User, Heart, LogOut, Sun, Moon } from "lucide-react";
 import { SocialLinks } from "../SocialLinks/SocialLinks";
 import { SearchBar } from "../SearchBar/SearchBar";
 import { CartDrawer } from "../CartDrawer/CartDrawer";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { AuthApiError } from "../../services/users";
 import type { NavItem } from "../../types";
 import logo from "../../assets/logo.png";
@@ -63,6 +64,8 @@ export function Header() {
   const navigate = useNavigate();
   const { getItemCount, toggleCart } = useCart();
   const { user, login, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,6 +80,24 @@ export function Header() {
     setIsSearchOpen(false);
     setIsAccountOpen(false);
   }, [location]);
+
+  useEffect(() => {
+    if (!isAccountOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAccountOpen]);
 
   const itemCount = getItemCount();
   const visibleNavItems = user?.admin === true
@@ -108,7 +129,7 @@ export function Header() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "bg-branco/95 backdrop-blur-md shadow-sm border-b border-cinza-quente"
+            ? "bg-branco/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-sm border-b border-cinza-quente dark:border-zinc-800"
             : "bg-transparent"
         }`}
         role="banner"
@@ -139,7 +160,7 @@ export function Header() {
                       className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                         location.pathname === item.href
                           ? "bg-rosa-lais/10 text-rosa-lais"
-                          : "text-grafite-arroxeado hover:text-rosa-lais hover:bg-rosa-lais/10"
+                          : "text-grafite-arroxeado dark:text-zinc-200 hover:text-rosa-lais dark:hover:text-rosa-lais hover:bg-rosa-lais/10"
                       }`}
                     >
                       {item.label}
@@ -157,24 +178,24 @@ export function Header() {
               <SearchBar variant="header" placeholder="O que você procura?" />
             </div>
 
-            <div className="relative flex items-center gap-2 shrink-0">
+            <div ref={accountMenuRef} className="relative flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setIsAccountOpen((open) => !open)}
-                className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors lg:p-2.5"
+                className="relative p-2 rounded-xl text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors lg:p-2.5"
                 aria-label="Minha conta"
                 aria-expanded={isAccountOpen}
               >
                 <User className="w-5 h-5 lg:w-6 lg:h-6" aria-hidden="true" />
               </button>
               <button
-                className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors lg:p-2.5"
+                className="relative p-2 rounded-xl text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors lg:p-2.5"
                 aria-label="Favoritos"
               >
                 <Heart className="w-5 h-5 lg:w-6 lg:h-6" aria-hidden="true" />
               </button>
               <button
                 onClick={toggleCart}
-                className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors lg:p-2.5"
+                className="relative p-2 rounded-xl text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors lg:p-2.5"
                 aria-label={`Carrinho de compras, ${itemCount} itens`}
               >
                 <ShoppingBag
@@ -188,24 +209,48 @@ export function Header() {
                 )}
               </button>
               {isAccountOpen && (
-                <div className="absolute right-0 top-full z-[60] mt-3 w-[min(22rem,calc(100vw-2rem))] animate-[slideUp_180ms_ease-out] rounded-2xl border border-cinza-quente bg-branco p-5 shadow-xl">
+                <div className="absolute right-0 top-full z-[60] mt-3 w-[min(22rem,calc(100vw-2rem))] animate-[slideUp_180ms_ease-out] rounded-2xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-900 p-5 shadow-xl text-grafite-arroxeado dark:text-zinc-100">
+                  <div className="flex items-center justify-between border-b border-cinza-quente/60 dark:border-zinc-800 pb-3 mb-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-cinza-amarronzado dark:text-zinc-400">Minha Conta</span>
+                    <button
+                      type="button"
+                      onClick={toggleTheme}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cinza-quente/40 dark:bg-zinc-800 hover:bg-cinza-quente dark:hover:bg-zinc-700 text-xs font-medium text-grafite-arroxeado dark:text-zinc-200 transition-colors"
+                      title="Alternar modo claro / escuro"
+                      aria-label="Alternar modo claro / escuro"
+                    >
+                      {theme === "dark" ? (
+                        <>
+                          <Sun className="w-4 h-4 text-amber-400" />
+                          <span>Modo Claro</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <span>Modo Escuro</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
                   {user ? <>
-                    <p className="font-semibold text-roxo-profundo">{user.nome}</p>
-                    <p className="mb-4 text-sm text-cinza-amarronzado">{user.email}</p>
-                    {profileIncomplete && <Link to="/perfil" className="mb-2 block rounded-xl bg-dourado-suave/25 px-4 py-3 text-sm font-medium text-roxo-profundo">⚠️ Continuar cadastro</Link>}
-                    <Link to="/perfil" className="mb-2 block rounded-xl px-4 py-3 text-sm font-medium text-grafite-arroxeado hover:bg-cinza-quente/50">Meu perfil / Editar dados</Link>
-                    <button onClick={logout} className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50"><LogOut className="h-4 w-4" />Sair</button>
+                    <p className="font-semibold text-roxo-profundo dark:text-zinc-100 text-base">{user.nome}</p>
+                    <p className="mb-4 text-sm text-cinza-amarronzado dark:text-zinc-400">{user.email}</p>
+                    {profileIncomplete && <Link to="/perfil" className="mb-2 block rounded-xl bg-dourado-suave/25 dark:bg-amber-500/20 px-4 py-3 text-sm font-medium text-roxo-profundo dark:text-amber-200">⚠️ Continuar cadastro</Link>}
+                    <Link to="/perfil" className="mb-2 block rounded-xl px-4 py-3 text-sm font-medium text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800">Meu perfil / Editar dados</Link>
+                    <button onClick={logout} className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"><LogOut className="h-4 w-4" />Sair</button>
                   </> : <form onSubmit={handleLogin} className="space-y-3">
-                    <h2 className="font-serif text-xl font-bold text-roxo-profundo">Entrar</h2>
-                    <label className="grid gap-1 text-sm">E-mail<input className="rounded-xl border border-cinza-quente px-3 py-2" type="email" value={email} required onChange={(event) => setEmail(event.target.value)} /></label>
-                    <label className="grid gap-1 text-sm">Senha<input className="rounded-xl border border-cinza-quente px-3 py-2" type="password" value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
-                    {loginError && <p className="text-sm text-red-600">{loginError}</p>}
-                    <button disabled={isLoggingIn} className="w-full rounded-xl bg-rosa-lais px-4 py-2.5 font-medium text-branco disabled:opacity-50">{isLoggingIn ? "Entrando..." : "Entrar"}</button>
-                    <p className="text-center text-sm text-cinza-amarronzado">Ainda não tem conta? <Link className="font-medium text-rosa-lais" to="/cadastro">Cadastre-se</Link></p>
+                    <h2 className="font-serif text-xl font-bold text-roxo-profundo dark:text-zinc-100">Entrar</h2>
+                    <label className="grid gap-1 text-sm text-grafite-arroxeado dark:text-zinc-200">E-mail<input className="rounded-xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-800 text-grafite-arroxeado dark:text-zinc-100 px-3 py-2 focus:outline-none focus:border-rosa-lais" type="email" value={email} required onChange={(event) => setEmail(event.target.value)} /></label>
+                    <label className="grid gap-1 text-sm text-grafite-arroxeado dark:text-zinc-200">Senha<input className="rounded-xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-800 text-grafite-arroxeado dark:text-zinc-100 px-3 py-2 focus:outline-none focus:border-rosa-lais" type="password" value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
+                    {loginError && <p className="text-sm text-red-600 dark:text-red-400">{loginError}</p>}
+                    <button disabled={isLoggingIn} className="w-full rounded-xl bg-rosa-lais px-4 py-2.5 font-medium text-branco disabled:opacity-50 hover:opacity-90 transition-opacity">{isLoggingIn ? "Entrando..." : "Entrar"}</button>
+                    <p className="text-center text-sm text-cinza-amarronzado dark:text-zinc-400">Ainda não tem conta? <Link className="font-medium text-rosa-lais" to="/cadastro">Cadastre-se</Link></p>
                   </form>}
                 </div>
               )}
             </div>
+
 
             <div className="lg:hidden flex items-center gap-2">
               <button

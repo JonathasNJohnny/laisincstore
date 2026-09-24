@@ -112,8 +112,8 @@ Você é responsável por todas as atividades em sua conta. Podemos suspender ou
     id: "contato",
     title: "14. Contato",
     content: `Dúvidas sobre estes Termos?
-**E-mail:** contato@laisinc.com
-**Endereço:** São Paulo - SP, Brasil
+**E-mail:** contatolais.inc@gmail.com
+**Endereço:** Goianira - GO, Brasil
 
 Última atualização: ${new Date().toLocaleDateString("pt-BR")}`,
   },
@@ -141,13 +141,38 @@ export function TermsPage() {
             <article
               key={section.id}
               id={section.id}
-              className="bg-branco rounded-2xl border border-cinza-quete p-6 lg:p-8"
+              className="bg-branco rounded-2xl border border-cinza-quente p-6 lg:p-8"
             >
               <h2 className="font-serif text-xl lg:text-2xl font-bold text-roxo-profundo mb-4">
                 {section.title}
               </h2>
-              <div className="prose prose-cinza-amarronzado max-w-none text-cinza-amarronzado leading-relaxed whitespace-pre-line">
-                {section.content}
+              <div className="space-y-3 text-cinza-amarronzado dark:text-zinc-300 leading-relaxed">
+                {section.content.split("\n").map((line, lineIdx) => {
+                  if (!line.trim()) {
+                    return <div key={lineIdx} className="h-1" />;
+                  }
+
+                  const parts = line.split(/(\*\*.*?\*\*)/g);
+
+                  return (
+                    <p key={lineIdx} className="text-base">
+                      {parts.map((part, partIdx) => {
+                        if (part.startsWith("**") && part.endsWith("**")) {
+                          const innerText = part.slice(2, -2);
+                          return (
+                            <strong
+                              key={partIdx}
+                              className="font-bold uppercase text-roxo-profundo dark:text-zinc-100"
+                            >
+                              {innerText.toUpperCase()}
+                            </strong>
+                          );
+                        }
+                        return part;
+                      })}
+                    </p>
+                  );
+                })}
               </div>
             </article>
           ))}

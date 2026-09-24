@@ -279,7 +279,7 @@ export function CartPage() {
                   <Button variant="primary" fullWidth size="lg" asChild>
                     <Link to="/checkout">Finalizar compra</Link>
                   </Button>
-                  <Button variant="outline" fullWidth asChild>
+                  <Button variant="primary" fullWidth asChild>
                     <Link to="/loja">Continuar comprando</Link>
                   </Button>
                 </div>

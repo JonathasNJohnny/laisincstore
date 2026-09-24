@@ -45,36 +45,19 @@ function HeroBannerCarousel({ banners }: { banners: HeroBanner[] }) {
 
   return (
     <section
-      className="bg-cream px-4 pt-0 pb-0 sm:px-6"
+      className="bg-branco px-4 pt-0 pb-0 sm:px-6"
       aria-label="Banners em destaque"
     >
-      {/* Aumento da altura do container (h-44 mobile -> sm:h-64 -> md:h-80 -> lg:h-96) */}
-      <div className="relative mx-auto h-44 w-full max-w-10xl overflow-hidden rounded-2xl shadow-sm sm:h-64 md:h-80 lg:h-96">
+      <div className="grid grid-cols-1 grid-rows-1 relative mx-auto w-full max-w-10xl overflow-hidden rounded-2xl shadow-sm">
         {banners.map((banner, index) => {
           const imageUrl = getHeroBannerImageUrl(banner);
           const content = (
-            <div className="relative h-full w-full overflow-hidden bg-cream">
-              {/* 1. Imagem de fundo borrada */}
-              <img
-                src={imageUrl}
-                alt=""
-                aria-hidden="true"
-                crossOrigin="anonymous"
-                className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
-              />
-
-              {/* 2. Overlay suave para uniformizar o fundo com a cor da página */}
-              <div
-                className="absolute inset-0 bg-cream/20"
-                aria-hidden="true"
-              />
-
-              {/* 3. Imagem principal inteira sem cortes */}
+            <div className="relative w-full overflow-hidden bg-branco rounded-2xl">
               <img
                 src={imageUrl}
                 alt="Banner em destaque"
                 crossOrigin="anonymous"
-                className="relative z-10 h-full w-full object-contain object-center"
+                className="w-full h-auto block rounded-2xl object-cover"
                 loading={index === 0 ? "eager" : "lazy"}
               />
             </div>
@@ -83,7 +66,9 @@ function HeroBannerCarousel({ banners }: { banners: HeroBanner[] }) {
           return (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-700 ${isCurrent ? "opacity-100" : "pointer-events-none opacity-0"}`}
+              className={`col-start-1 row-start-1 w-full transition-opacity duration-700 ${
+                isCurrent ? "opacity-100 z-10" : "pointer-events-none opacity-0 z-0"
+              }`}
               aria-hidden={!isCurrent}
             >
               {banner.redirect_link ? (
@@ -91,7 +76,7 @@ function HeroBannerCarousel({ banners }: { banners: HeroBanner[] }) {
                   <Link
                     to={banner.redirect_link}
                     tabIndex={isCurrent ? 0 : -1}
-                    className="block h-full w-full"
+                    className="block w-full"
                   >
                     {content}
                   </Link>
@@ -99,7 +84,7 @@ function HeroBannerCarousel({ banners }: { banners: HeroBanner[] }) {
                   <a
                     href={banner.redirect_link}
                     tabIndex={isCurrent ? 0 : -1}
-                    className="block h-full w-full"
+                    className="block w-full"
                   >
                     {content}
                   </a>

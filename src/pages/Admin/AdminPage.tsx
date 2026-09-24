@@ -526,11 +526,10 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "products"}
           onClick={() => setActiveTab("products")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-            activeTab === "products"
-              ? "bg-roxo-profundo text-branco"
-              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-          }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "products"
+            ? "bg-roxo-profundo text-branco"
+            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+            }`}
         >
           Produtos
         </button>
@@ -539,11 +538,10 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "banners"}
           onClick={() => setActiveTab("banners")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-            activeTab === "banners"
-              ? "bg-roxo-profundo text-branco"
-              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-          }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "banners"
+            ? "bg-roxo-profundo text-branco"
+            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+            }`}
         >
           Banner
         </button>
@@ -556,11 +554,10 @@ export function AdminPage() {
             void loadIntegration();
             void loadSuperFreteIntegration();
           }}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-            activeTab === "payment"
-              ? "bg-roxo-profundo text-branco"
-              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-          }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "payment"
+            ? "bg-roxo-profundo text-branco"
+            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+            }`}
         >
           Integrações
         </button>
@@ -569,362 +566,360 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "orders"}
           onClick={() => setActiveTab("orders")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-            activeTab === "orders"
-              ? "bg-roxo-profundo text-branco"
-              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-          }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "orders"
+            ? "bg-roxo-profundo text-branco"
+            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+            }`}
         >
           Pedidos
         </button>
       </div>
 
       {activeTab === "products" ? (
-      <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
-          <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
-            {form.id ? "Editar produto" : "Adicionar produto"}
-          </h2>
+        <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
+            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
+              {form.id ? "Editar produto" : "Adicionar produto"}
+            </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Nome
-              </label>
-              <input
-                value={form.name}
-                onChange={(event) =>
-                  setForm({ ...form, name: event.target.value })
-                }
-                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-                required
-              />
-            </div>
-
-            <div className="relative">
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Categoria
-              </label>
-              <input
-                value={form.category}
-                onFocus={() => setIsCategoryMenuOpen(true)}
-                onBlur={() => setIsCategoryMenuOpen(false)}
-                onChange={(event) => {
-                  setForm({ ...form, category: event.target.value });
-                  setIsCategoryMenuOpen(true);
-                }}
-                autoComplete="off"
-                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-                required
-              />
-              {isCategoryMenuOpen && filteredCategories.length > 0 && (
-                <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-cinza-quente bg-branco p-1 shadow-lg">
-                  {filteredCategories.map((category) => (
-                    <li key={category}>
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setForm({ ...form, category });
-                          setIsCategoryMenuOpen(false);
-                        }}
-                        className="w-full rounded-lg px-3 py-2 text-left text-sm text-grafite-arroxeado hover:bg-rosa-lais/10"
-                      >
-                        {category}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Slug
-              </label>
-              <input
-                value={form.slug}
-                onChange={(event) =>
-                  setForm({ ...form, slug: event.target.value })
-                }
-                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Descrição
-              </label>
-              <textarea
-                value={form.description}
-                onChange={(event) =>
-                  setForm({ ...form, description: event.target.value })
-                }
-                className="min-h-28 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                  Preço
+                  Nome
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.price}
+                  value={form.name}
                   onChange={(event) =>
-                    setForm({ ...form, price: event.target.value })
+                    setForm({ ...form, name: event.target.value })
                   }
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                  Estoque
+                  Categoria
                 </label>
                 <input
-                  type="number"
-                  min="0"
-                  value={form.stock}
-                  onChange={(event) =>
-                    setForm({ ...form, stock: event.target.value })
-                  }
+                  value={form.category}
+                  onFocus={() => setIsCategoryMenuOpen(true)}
+                  onBlur={() => setIsCategoryMenuOpen(false)}
+                  onChange={(event) => {
+                    setForm({ ...form, category: event.target.value });
+                    setIsCategoryMenuOpen(true);
+                  }}
+                  autoComplete="off"
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
+                />
+                {isCategoryMenuOpen && filteredCategories.length > 0 && (
+                  <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-cinza-quente bg-branco p-1 shadow-lg">
+                    {filteredCategories.map((category) => (
+                      <li key={category}>
+                        <button
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setForm({ ...form, category });
+                            setIsCategoryMenuOpen(false);
+                          }}
+                          className="w-full rounded-lg px-3 py-2 text-left text-sm text-grafite-arroxeado hover:bg-rosa-lais/10"
+                        >
+                          {category}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                  Slug
+                </label>
+                <input
+                  value={form.slug}
+                  onChange={(event) =>
+                    setForm({ ...form, slug: event.target.value })
+                  }
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                  Peso (g)
+                  Descrição
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={form.weightGrams}
+                <textarea
+                  value={form.description}
                   onChange={(event) =>
-                    setForm({ ...form, weightGrams: event.target.value })
+                    setForm({ ...form, description: event.target.value })
                   }
-                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                  className="min-h-28 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
                 />
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-grafite-arroxeado">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                    Preço
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.price}
+                    onChange={(event) =>
+                      setForm({ ...form, price: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                    Estoque
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.stock}
+                    onChange={(event) =>
+                      setForm({ ...form, stock: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                    Peso (g)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.weightGrams}
+                    onChange={(event) =>
+                      setForm({ ...form, weightGrams: event.target.value })
+                    }
+                    className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 text-sm text-grafite-arroxeado">
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(event) =>
+                      setForm({ ...form, active: event.target.checked })
+                    }
+                  />
+                  Ativo
+                </label>
+
+                <label className="flex items-center gap-2 text-sm text-grafite-arroxeado">
+                  <input
+                    type="checkbox"
+                    checked={form.order}
+                    onChange={(event) =>
+                      setForm({ ...form, order: event.target.checked })
+                    }
+                  />
+                  Encomenda
+                </label>
+              </div>
+
+              <div>
+                <span className="mb-1 block text-sm font-medium text-grafite-arroxeado">
+                  Imagens
+                </span>
                 <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) =>
-                    setForm({ ...form, active: event.target.checked })
-                  }
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  onChange={(event) => addImages(event.target.files)}
+                  className="sr-only"
                 />
-                Ativo
-              </label>
-
-              <label className="flex items-center gap-2 text-sm text-grafite-arroxeado">
-                <input
-                  type="checkbox"
-                  checked={form.order}
-                  onChange={(event) =>
-                    setForm({ ...form, order: event.target.checked })
-                  }
-                />
-                Encomenda
-              </label>
-            </div>
-
-            <div>
-              <span className="mb-1 block text-sm font-medium text-grafite-arroxeado">
-                Imagens
-              </span>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                multiple
-                onChange={(event) => addImages(event.target.files)}
-                className="sr-only"
-              />
-              <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-cinza-quente bg-cream p-3">
-                {savedImages.map((image) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={() => setExpandedImage(image)}
-                    className="group relative h-24 w-24 overflow-hidden rounded-lg border-2 border-dourado-suave bg-branco shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
-                    aria-label={`Ampliar ${image.name}`}
-                  >
-                    <img
-                      src={getImageUrl(image.url)}
-                      alt=""
-                      crossOrigin="anonymous"
-                      className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
-                    />
-                  </button>
-                ))}
-                {images.map((image, index) => (
-                  <div
-                    key={`${image.name}-${image.lastModified}-${index}`}
-                    className="group relative h-24 w-24 overflow-hidden rounded-lg border border-cinza-quente bg-branco shadow-sm"
-                  >
+                <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-cinza-quente bg-cream p-3">
+                  {savedImages.map((image) => (
                     <button
+                      key={image.id}
                       type="button"
-                      onClick={() => setExpandedImage({ id: `new-${index}`, url: imagePreviews[index] ?? "", name: image.name })}
-                      className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rosa-lais"
+                      onClick={() => setExpandedImage(image)}
+                      className="group relative h-24 w-24 overflow-hidden rounded-lg border-2 border-dourado-suave bg-branco shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
                       aria-label={`Ampliar ${image.name}`}
                     >
                       <img
-                        src={imagePreviews[index]}
-                        alt={image.name}
+                        src={getImageUrl(image.url)}
+                        alt=""
+                        crossOrigin="anonymous"
                         className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                       />
                     </button>
+                  ))}
+                  {images.map((image, index) => (
+                    <div
+                      key={`${image.name}-${image.lastModified}-${index}`}
+                      className="group relative h-24 w-24 overflow-hidden rounded-lg border border-cinza-quente bg-branco shadow-sm"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandedImage({ id: `new-${index}`, url: imagePreviews[index] ?? "", name: image.name })}
+                        className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rosa-lais"
+                        aria-label={`Ampliar ${image.name}`}
+                      >
+                        <img
+                          src={imagePreviews[index]}
+                          alt={image.name}
+                          className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImages((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-roxo-profundo/85 text-lg leading-none text-branco shadow-sm transition hover:bg-rosa-lais focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-1"
+                        aria-label={`Remover ${image.name}`}
+                        title={`Remover ${image.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {savedImages.length + images.length < 10 && (
                     <button
                       type="button"
-                      onClick={() => setImages((current) => current.filter((_, fileIndex) => fileIndex !== index))}
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-roxo-profundo/85 text-lg leading-none text-branco shadow-sm transition hover:bg-rosa-lais focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-1"
-                      aria-label={`Remover ${image.name}`}
-                      title={`Remover ${image.name}`}
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex h-10 min-w-10 items-center justify-center rounded-lg border border-rosa-lais bg-branco px-3 text-xl font-medium text-rosa-lais transition hover:bg-rosa-lais/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                      aria-label="Adicionar outra imagem"
+                      title="Adicionar outra imagem"
                     >
-                      ×
+                      +
                     </button>
-                  </div>
-                ))}
-                {savedImages.length + images.length < 10 && (
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    className="flex h-10 min-w-10 items-center justify-center rounded-lg border border-rosa-lais bg-branco px-3 text-xl font-medium text-rosa-lais transition hover:bg-rosa-lais/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
-                    aria-label="Adicionar outra imagem"
-                    title="Adicionar outra imagem"
-                  >
-                    +
-                  </button>
-                )}
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-cinza-amarronzado">
+                  Adicione até 10 imagens (JPG, PNG, WEBP ou GIF; máximo de 5 MB cada).
+                </p>
               </div>
-              <p className="mt-1 text-xs text-cinza-amarronzado">
-                Adicione até 10 imagens (JPG, PNG, WEBP ou GIF; máximo de 5 MB cada).
-              </p>
-            </div>
 
-            {submitError && (
-              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                {submitError}
-              </p>
-            )}
+              {submitError && (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {submitError}
+                </p>
+              )}
 
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60"
-              >
-                {isSubmitting
-                  ? "Salvando..."
-                  : form.id
-                    ? "Salvar alterações"
-                    : "Adicionar produto"}
-              </button>
-
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-xl border border-cinza-quente bg-branco px-5 py-3 font-semibold text-grafite-arroxeado"
-              >
-                Limpar
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
-          <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
-            Lista de produtos
-          </h2>
-
-          {loading ? (
-            <p className="text-cinza-amarronzado">Carregando produtos...</p>
-          ) : (
-            <div className="space-y-4">
-              {products.map((product) => (
-                <article
-                  key={product.id}
-                  className="rounded-2xl border border-cinza-quente p-3"
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60"
                 >
-                  <div className="flex gap-3">
-                    <img
-                      src={getImageUrl(product.image_url)}
-                      alt={product.name}
-                      crossOrigin="anonymous"
-                      className="h-20 w-20 rounded-xl object-cover"
-                    />
+                  {isSubmitting
+                    ? "Salvando..."
+                    : form.id
+                      ? "Salvar alterações"
+                      : "Adicionar produto"}
+                </button>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-lg font-semibold text-roxo-profundo">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm font-medium text-rosa-lais">
-                            {product.category || "Sem categoria"}
-                          </p>
-                          <p className="text-sm text-cinza-amarronzado">
-                            {product.description}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleOrder(product)}
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            product.order
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-xl border border-cinza-quente bg-branco px-5 py-3 font-semibold text-grafite-arroxeado"
+                >
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
+            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
+              Lista de produtos
+            </h2>
+
+            {loading ? (
+              <p className="text-cinza-amarronzado">Carregando produtos...</p>
+            ) : (
+              <div className="space-y-4">
+                {products.map((product) => (
+                  <article
+                    key={product.id}
+                    className="rounded-2xl border border-cinza-quente p-3"
+                  >
+                    <div className="flex gap-3">
+                      <img
+                        src={getImageUrl(product.image_url)}
+                        alt={product.name}
+                        crossOrigin="anonymous"
+                        className="h-20 w-20 rounded-xl object-cover"
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold text-roxo-profundo">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm font-medium text-rosa-lais">
+                              {product.category || "Sem categoria"}
+                            </p>
+                            <p className="text-sm text-cinza-amarronzado">
+                              {product.description}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleOrder(product)}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.order
                               ? "bg-rosa-lais text-branco"
                               : "bg-cinza-quente text-roxo-profundo"
-                          }`}
-                        >
-                          {product.order ? "Encomenda" : "Pronta entrega"}
-                        </button>
-                      </div>
+                              }`}
+                          >
+                            {product.order ? "Encomenda" : "Pronta entrega"}
+                          </button>
+                        </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-grafite-arroxeado">
-                        <span>
-                          R${" "}
-                          {Number(product.price).toFixed(2).replace(".", ",")}
-                        </span>
-                        <span>Estoque: {product.stock}</span>
-                      </div>
+                        <div className="mt-3 flex items-center justify-between gap-3 text-sm text-grafite-arroxeado">
+                          <span>
+                            R${" "}
+                            {Number(product.price).toFixed(2).replace(".", ",")}
+                          </span>
+                          <span>Estoque: {product.stock}</span>
+                        </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(product)}
-                          className="rounded-lg bg-roxo-profundo px-3 py-2 text-sm font-medium text-branco"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(product.id)}
-                          className="rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700"
-                        >
-                          Remover
-                        </button>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(product)}
+                            className="rounded-lg bg-roxo-profundo px-3 py-2 text-sm font-medium text-branco"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(product.id)}
+                            className="rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700"
+                          >
+                            Remover
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       ) : activeTab === "banners" ? (
         <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
@@ -944,7 +939,7 @@ export function AdminPage() {
                   className="w-full rounded-xl border border-dashed border-cinza-quente bg-cream px-4 py-3 text-sm"
                 />
                 <p className="mt-2 text-xs text-cinza-amarronzado">
-                  Tamanho recomendado: 1920 × 1080 px (proporção 16:9).
+                  Tamanho recomendado: 1920 x 404 px.
                 </p>
                 {(bannerPreview || bannerForm.imageUrl) && (
                   <button
@@ -1096,86 +1091,86 @@ export function AdminPage() {
             )}
           </div>
           <div className="relative mt-10 border-t border-cinza-quente pt-8">
-          <button
-            type="button"
-            aria-label="Como obter o token da SuperFrete"
-            aria-expanded={isSuperFreteHelpOpen}
-            onClick={() => setIsSuperFreteHelpOpen((isOpen) => !isOpen)}
-            className="absolute right-0 top-6 flex h-8 w-8 items-center justify-center rounded-full border border-cinza-quente bg-branco text-sm font-bold text-roxo-profundo shadow-sm transition-colors hover:bg-rosa-lais/10"
-          >
-            ?
-          </button>
-          {isSuperFreteHelpOpen && (
-            <div role="tooltip" className="absolute right-0 top-16 z-10 w-72 rounded-xl border border-cinza-quente bg-branco p-4 text-sm leading-relaxed text-grafite-arroxeado shadow-lg">
-              Acesse sua conta SuperFrete e procure as opções de integrações ou configurações para gerar e copiar o token de API. Cole-o aqui uma única vez; por segurança, ele não será exibido novamente.
-            </div>
-          )}
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
-            Integrações &gt; SuperFrete
-          </p>
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-roxo-profundo">SuperFrete</h2>
-              <p className="mt-2 text-sm text-cinza-amarronzado">
-                Cole o token gerado na sua conta SuperFrete. Ele é enviado somente para o servidor e nunca é exibido ou salvo neste navegador.
-              </p>
-            </div>
-            {loadingSuperFrete ? (
-              <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
-            ) : (
-              <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${superFreteIntegration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
-                Status: {superFreteIntegration?.connected ? "Conectado" : "Não conectado"}
-              </span>
+            <button
+              type="button"
+              aria-label="Como obter o token da SuperFrete"
+              aria-expanded={isSuperFreteHelpOpen}
+              onClick={() => setIsSuperFreteHelpOpen((isOpen) => !isOpen)}
+              className="absolute right-0 top-6 flex h-8 w-8 items-center justify-center rounded-full border border-cinza-quente bg-branco text-sm font-bold text-roxo-profundo shadow-sm transition-colors hover:bg-rosa-lais/10"
+            >
+              ?
+            </button>
+            {isSuperFreteHelpOpen && (
+              <div role="tooltip" className="absolute right-0 top-16 z-10 w-72 rounded-xl border border-cinza-quente bg-branco p-4 text-sm leading-relaxed text-grafite-arroxeado shadow-lg">
+                Acesse sua conta SuperFrete e procure as opções de integrações ou configurações para gerar e copiar o token de API. Cole-o aqui uma única vez; por segurança, ele não será exibido novamente.
+              </div>
             )}
-          </div>
-
-          {superFreteIntegration?.connected && (
-            <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Integração ativa. CEP de origem: {superFreteIntegration.originPostalCode ?? "não informado"}.
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
+              Integrações &gt; SuperFrete
             </p>
-          )}
-          {superFreteError && (
-            <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{superFreteError}</p>
-          )}
-
-          <form onSubmit={handleSaveSuperFrete} className="mt-8 space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-token">Token secreto</label>
-              <input
-                id="superfrete-token"
-                type="password"
-                autoComplete="off"
-                value={superFreteForm.token}
-                onChange={(event) => setSuperFreteForm({ ...superFreteForm, token: event.target.value })}
-                placeholder={superFreteIntegration?.connected ? "Informe outro token para substituir" : "Cole o token da SuperFrete"}
-                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-origin-postal-code">CEP de origem</label>
-              <input
-                id="superfrete-origin-postal-code"
-                inputMode="numeric"
-                autoComplete="postal-code"
-                value={superFreteForm.originPostalCode}
-                onChange={(event) => setSuperFreteForm({ ...superFreteForm, originPostalCode: event.target.value })}
-                placeholder="01001-000"
-                className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-                required
-              />
-            </div>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button type="submit" disabled={loadingSuperFrete || isSavingSuperFrete} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
-                {isSavingSuperFrete ? "Salvando..." : "Salvar conexão"}
-              </button>
-              {superFreteIntegration?.connected && (
-                <button type="button" onClick={handleDisconnectSuperFrete} disabled={isSavingSuperFrete} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">
-                  Desconectar
-                </button>
+            <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-roxo-profundo">SuperFrete</h2>
+                <p className="mt-2 text-sm text-cinza-amarronzado">
+                  Cole o token gerado na sua conta SuperFrete. Ele é enviado somente para o servidor e nunca é exibido ou salvo neste navegador.
+                </p>
+              </div>
+              {loadingSuperFrete ? (
+                <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
+              ) : (
+                <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${superFreteIntegration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
+                  Status: {superFreteIntegration?.connected ? "Conectado" : "Não conectado"}
+                </span>
               )}
             </div>
-          </form>
+
+            {superFreteIntegration?.connected && (
+              <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                Integração ativa. CEP de origem: {superFreteIntegration.originPostalCode ?? "não informado"}.
+              </p>
+            )}
+            {superFreteError && (
+              <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{superFreteError}</p>
+            )}
+
+            <form onSubmit={handleSaveSuperFrete} className="mt-8 space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-token">Token secreto</label>
+                <input
+                  id="superfrete-token"
+                  type="password"
+                  autoComplete="off"
+                  value={superFreteForm.token}
+                  onChange={(event) => setSuperFreteForm({ ...superFreteForm, token: event.target.value })}
+                  placeholder={superFreteIntegration?.connected ? "Informe outro token para substituir" : "Cole o token da SuperFrete"}
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-origin-postal-code">CEP de origem</label>
+                <input
+                  id="superfrete-origin-postal-code"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  value={superFreteForm.originPostalCode}
+                  onChange={(event) => setSuperFreteForm({ ...superFreteForm, originPostalCode: event.target.value })}
+                  placeholder="01001-000"
+                  className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+                  required
+                />
+              </div>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button type="submit" disabled={loadingSuperFrete || isSavingSuperFrete} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
+                  {isSavingSuperFrete ? "Salvando..." : "Salvar conexão"}
+                </button>
+                {superFreteIntegration?.connected && (
+                  <button type="button" onClick={handleDisconnectSuperFrete} disabled={isSavingSuperFrete} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">
+                    Desconectar
+                  </button>
+                )}
+              </div>
+            </form>
           </div>
         </section>
       ) : (

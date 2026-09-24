@@ -51,18 +51,18 @@ export function CartDrawer() {
         aria-hidden="true"
       />
       <aside
-        className="fixed right-0 top-0 h-full w-full max-w-sm lg:max-w-md bg-branco z-50 flex flex-col shadow-2xl animate-slide-up"
+        className="fixed right-0 top-0 h-full w-full max-w-sm lg:max-w-md bg-branco dark:bg-zinc-900 z-50 flex flex-col shadow-2xl animate-slide-up text-grafite-arroxeado dark:text-zinc-100"
         role="dialog"
         aria-label="Carrinho de compras"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between p-4 border-b border-cinza-quente">
-          <h2 className="font-serif text-xl font-bold text-roxo-profundo">
+        <div className="flex items-center justify-between p-4 border-b border-cinza-quente dark:border-zinc-800">
+          <h2 className="font-serif text-xl font-bold text-roxo-profundo dark:text-zinc-100">
             Carrinho ({itemCount})
           </h2>
           <button
             onClick={toggleCart}
-            className="p-2 rounded-xl text-cinza-amarronzado hover:bg-cinza-quente/50 transition-colors"
+            className="p-2 rounded-xl text-cinza-amarronzado dark:text-zinc-400 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors"
             aria-label="Fechar carrinho"
           >
             <X className="w-5 h-5" aria-hidden="true" />
