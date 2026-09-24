@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -114,6 +114,10 @@ export function CheckoutPage() {
   const total = getTotal() + Math.round(shippingCost * 100);
   const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
   const paymentTotal = order ? Number(order.total_amount) : total / 100;
+  const orderId = order?.id;
+  const orderStatus = order?.status;
+  const orderTotalAmount = order?.total_amount;
+  const payerEmail = formData.email;
 
   useEffect(() => {
     if (!user) return;
@@ -224,10 +228,10 @@ export function CheckoutPage() {
   }, [destinationPostalCode, items]);
 
   useEffect(() => {
-    if (!order || order.status !== "pending_payment") return;
+    if (!orderId || orderStatus !== "pending_payment") return;
     const refreshOrder = async () => {
       try {
-        const response = await getOrder(order.id);
+        const response = await getOrder(orderId);
         setOrder(response.order);
       } catch {
         // MantÃ©m o PIX visÃ­vel e tenta novamente no prÃ³ximo intervalo.
@@ -236,28 +240,7 @@ export function CheckoutPage() {
     void refreshOrder();
     const interval = window.setInterval(() => void refreshOrder(), 4000);
     return () => window.clearInterval(interval);
-  }, [order]);
-
-  if (items.length === 0 && !order) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
-        <div className="container text-center">
-          <h1 className="font-serif text-3xl font-bold text-roxo-profundo mb-3">
-            Carrinho vazio
-          </h1>
-          <p className="text-cinza-amarronzado mb-8">
-            Adicione produtos para finalizar a compra.
-          </p>
-          <Button asChild variant="primary" size="lg">
-            <Link to="/loja">
-              <ArrowLeft className="w-5 h-5 mr-2" aria-hidden="true" />
-              Continuar comprando
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  }, [orderId, orderStatus]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -326,18 +309,18 @@ export function CheckoutPage() {
     }
   };
 
-  const handleCardSubmit = async (cardData: {
+  const handleCardSubmit = useCallback(async (cardData: {
     token: string;
     payment_method_id: string;
     installments: number;
     issuer_id?: string;
   }) => {
-    if (!order) return;
+    if (!orderId) return;
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
       await createCardPayment({
-        orderId: order.id,
+        orderId,
         cardToken: cardData.token,
         paymentMethodId: cardData.payment_method_id,
         installments: Number(cardData.installments),
@@ -349,7 +332,40 @@ export function CheckoutPage() {
     } finally {
       setIsCreatingPayment(false);
     }
-  };
+  }, [orderId]);
+
+  const cardPaymentInitialization = useMemo(() => {
+    if (orderTotalAmount === undefined) return undefined;
+    return {
+      amount: Number(orderTotalAmount),
+      payer: { email: payerEmail },
+    };
+  }, [orderTotalAmount, payerEmail]);
+
+  const handleCardError = useCallback(() => {
+    setPaymentError("Nao foi possivel carregar o formulario de cartao.");
+  }, []);
+
+  if (items.length === 0 && !order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
+        <div className="container text-center">
+          <h1 className="font-serif text-3xl font-bold text-roxo-profundo mb-3">
+            Carrinho vazio
+          </h1>
+          <p className="text-cinza-amarronzado mb-8">
+            Adicione produtos para finalizar a compra.
+          </p>
+          <Button asChild variant="primary" size="lg">
+            <Link to="/loja">
+              <ArrowLeft className="w-5 h-5 mr-2" aria-hidden="true" />
+              Continuar comprando
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const copyPixCode = async () => {
     if (!pixCode) return;
@@ -803,12 +819,12 @@ export function CheckoutPage() {
                 )}
                 {payment === "credit" && order && (
                   <div className="mt-6 rounded-xl border border-cinza-quente p-4">
-                    {mercadoPagoPublicKey ? (
+                    {mercadoPagoPublicKey && cardPaymentInitialization ? (
                       <CardPayment
-                        initialization={{ amount: Number(order.total_amount), payer: { email: formData.email } }}
+                        initialization={cardPaymentInitialization}
                         locale="pt-BR"
                         onSubmit={handleCardSubmit}
-                        onError={() => setPaymentError("Não foi possível carregar o formulário de cartão.")}
+                        onError={handleCardError}
                       />
                     ) : (
                       <p className="text-sm text-rose-700">Configure VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar pagamento com cartão.</p>
