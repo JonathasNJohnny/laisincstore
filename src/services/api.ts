@@ -189,6 +189,7 @@ export interface Order {
   id: number | string;
   status: "pending_payment" | "paid" | "cancelled";
   total_amount: string | number;
+  shipping_price?: string | number | null;
   currency: string;
   email: string;
   created_at?: string;
@@ -203,6 +204,8 @@ export interface Order {
   pixCopyPaste?: string | null;
   items: Array<{
     productId: number | string;
+    productName?: string;
+    image?: string | null;
     quantity: number;
     unitPrice: string | number;
     subtotal: string | number;

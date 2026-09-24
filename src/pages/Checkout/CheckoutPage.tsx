@@ -98,6 +98,7 @@ export function CheckoutPage() {
   const { theme } = useTheme();
   const [searchParams] = useSearchParams();
   const continueOrderId = searchParams.get("continueOrder");
+  const isContinuingPayment = Boolean(continueOrderId);
   const [step, setStep] = useState(1);
   const [shipping, setShipping] = useState("");
   const [shippingOptions, setShippingOptions] = useState<ShippingQuote[]>([]);
@@ -123,6 +124,8 @@ export function CheckoutPage() {
   const orderStatus = order?.status;
   const orderTotalAmount = order?.total_amount;
   const orderEmail = order?.email;
+  const orderSubtotal = order?.items.reduce((sum, item) => sum + Number(item.subtotal), 0) ?? 0;
+  const orderShippingPrice = Number(order?.shipping_price ?? 0);
   const userId = user?.id;
   const payerEmail = formData.email;
 
@@ -191,6 +194,8 @@ export function CheckoutPage() {
   const destinationPostalCode = formData.cep.replace(/\D/g, "");
 
   useEffect(() => {
+    if (isContinuingPayment) return;
+
     setShipping("");
     setShippingOptions([]);
 
@@ -232,7 +237,7 @@ export function CheckoutPage() {
       });
 
     return () => { active = false; };
-  }, [destinationPostalCode, items]);
+  }, [destinationPostalCode, isContinuingPayment, items]);
 
   useEffect(() => {
     if (!orderId || orderStatus !== "pending_payment") return;
@@ -334,7 +339,7 @@ export function CheckoutPage() {
       setPaymentError("Entre na sua conta para finalizar a compra.");
       return;
     }
-    if (!selectedShipping || destinationPostalCode.length !== 8) {
+    if (!order && (!selectedShipping || destinationPostalCode.length !== 8)) {
       setPaymentError("Selecione uma opção de frete válida antes de finalizar o pedido.");
       return;
     }
@@ -342,16 +347,18 @@ export function CheckoutPage() {
     setPaymentError("");
     try {
       const createdOrder = order ?? (await createOrder(formData.email, {
-        serviceId: selectedShipping.serviceId,
-        name: selectedShipping.name,
-        company: selectedShipping.company,
-        price: selectedShipping.price,
-        deliveryTime: selectedShipping.deliveryTime,
+        serviceId: selectedShipping!.serviceId,
+        name: selectedShipping!.name,
+        company: selectedShipping!.company,
+        price: selectedShipping!.price,
+        deliveryTime: selectedShipping!.deliveryTime,
         destinationPostalCode,
       })).order;
-      setOrder(createdOrder);
-      // O backend limpa o carrinho ao reservar o estoque para este pedido.
-      await clearCart(false);
+      if (!order) {
+        setOrder(createdOrder);
+        // O backend limpa o carrinho ao reservar o estoque para este pedido.
+        await clearCart(false);
+      }
 
       if (payment === "credit") return;
       if (payment !== "pix") {
@@ -1035,7 +1042,27 @@ export function CheckoutPage() {
                 Resumo do pedido
               </h3>
               <div className="space-y-3 mb-4">
-                {items.map((item) => (
+                {order ? order.items.map((item) => (
+                  <div key={item.productId} className="flex gap-3">
+                    {item.image ? (
+                      <img
+                        src={getImageUrl(item.image)}
+                        alt=""
+                        crossOrigin="anonymous"
+                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-rosa-lais/10 text-xs font-semibold text-rosa-lais">Item</div>
+                    )}
+                    <div className="flex-1 min-w-0 text-sm">
+                      <p className="font-medium text-grafite-arroxeado truncate">
+                        {item.productName || `Produto #${item.productId}`}
+                      </p>
+                      <p className="text-cinza-amarronzado">Qtd: {item.quantity}</p>
+                      <p className="font-medium text-rosa-lais">{formatCurrencyReal(Number(item.subtotal))}</p>
+                    </div>
+                  </div>
+                )) : items.map((item) => (
                   <div key={item.product.id} className="flex gap-3">
                     <img
                       src={getImageUrl(item.product.image)}
@@ -1061,13 +1088,17 @@ export function CheckoutPage() {
                 <div className="flex justify-between">
                   <span className="text-cinza-amarronzado">Subtotal</span>
                   <span className="font-medium text-grafite-arroxeado">
-                    {formatCurrency(subtotal)}
+                    {order ? formatCurrencyReal(orderSubtotal) : formatCurrency(subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-cinza-amarronzado">Frete</span>
                   <span className="font-medium text-grafite-arroxeado">
-                    {!selectedShipping
+                    {order
+                      ? orderShippingPrice === 0
+                        ? "GrÃ¡tis"
+                        : formatCurrencyReal(orderShippingPrice)
+                      : !selectedShipping
                       ? "A calcular"
                       : shippingCost === 0
                       ? "Grátis"
@@ -1076,7 +1107,7 @@ export function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-2 border-t border-cinza-quete">
                   <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
+                  <span>{order ? formatCurrencyReal(Number(order.total_amount)) : formatCurrency(total)}</span>
                 </div>
               </div>
 
