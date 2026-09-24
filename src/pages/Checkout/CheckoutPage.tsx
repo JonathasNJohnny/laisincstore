@@ -13,6 +13,7 @@ import { useCart } from "../../contexts/CartContext";
 import { getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
 import { formatCurrency, formatCurrencyReal } from "../../utils/currency";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { getCurrentUser, type User } from "../../services/users";
 import {
   ApiRequestError,
@@ -94,6 +95,7 @@ function readStoredCheckoutFields(userId: User["id"]): Partial<CheckoutForm> {
 export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [step, setStep] = useState(1);
   const [shipping, setShipping] = useState("");
   const [shippingOptions, setShippingOptions] = useState<ShippingQuote[]>([]);
@@ -341,6 +343,14 @@ export function CheckoutPage() {
       payer: { email: payerEmail },
     };
   }, [orderTotalAmount, payerEmail]);
+
+  const cardPaymentCustomization = useMemo(() => ({
+    visual: {
+      style: {
+        theme: theme === "dark" ? "dark" : "default",
+      },
+    },
+  }), [theme]);
 
   const handleCardError = useCallback(() => {
     setPaymentError("Nao foi possivel carregar o formulario de cartao.");
@@ -822,6 +832,7 @@ export function CheckoutPage() {
                     {mercadoPagoPublicKey && cardPaymentInitialization ? (
                       <CardPayment
                         initialization={cardPaymentInitialization}
+                        customization={cardPaymentCustomization}
                         locale="pt-BR"
                         onSubmit={handleCardSubmit}
                         onError={handleCardError}
