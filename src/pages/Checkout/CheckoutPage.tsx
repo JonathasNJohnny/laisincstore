@@ -46,6 +46,14 @@ const paymentMethods = [
   },
 ];
 
+const noFreteOption: ShippingQuote = {
+  serviceId: "no_frete",
+  name: "NoFrete",
+  company: "Administracao",
+  price: 0,
+  deliveryTime: 0,
+};
+
 const CHECKOUT_STORAGE_PREFIX = "laisinc_checkout_missing_fields";
 
 const emptyCheckoutForm = {
@@ -115,7 +123,9 @@ export function CheckoutPage() {
   const [isLoadingContinuation, setIsLoadingContinuation] = useState(Boolean(continueOrderId));
 
   const subtotal = getSubtotal();
-  const selectedShipping = shippingOptions.find((s) => String(s.serviceId) === shipping);
+  const availableShippingOptions = user?.admin ? [...shippingOptions, noFreteOption] : shippingOptions;
+  const selectedShipping = availableShippingOptions.find((s) => String(s.serviceId) === shipping);
+  const isNoFreteSelected = selectedShipping?.serviceId === noFreteOption.serviceId;
   const shippingCost = selectedShipping?.price || 0;
   const total = getTotal() + Math.round(shippingCost * 100);
   const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
@@ -326,7 +336,7 @@ export function CheckoutPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (step === 4) return;
-    if (step === 2 && (!shipping || isLoadingShipping || shippingError)) {
+    if (step === 2 && (!shipping || (!isNoFreteSelected && (isLoadingShipping || shippingError)))) {
       setShippingError(shippingError || "Aguarde o cálculo do frete antes de continuar.");
       return;
     }
@@ -833,7 +843,7 @@ export function CheckoutPage() {
                     role="radiogroup"
                     aria-label="Opções de frete"
                   >
-                    {shippingOptions.map((option) => (
+                    {availableShippingOptions.map((option) => (
                       <label
                         key={option.serviceId}
                         className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -848,7 +858,7 @@ export function CheckoutPage() {
                           value={String(option.serviceId)}
                           checked={shipping === String(option.serviceId)}
                           onChange={() => setShipping(String(option.serviceId))}
-                          disabled={isLoadingShipping}
+                          disabled={isLoadingShipping && option.serviceId !== noFreteOption.serviceId}
                           className="sr-only"
                           aria-label={option.name}
                         />
@@ -1114,7 +1124,7 @@ export function CheckoutPage() {
               <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                 <button
                   type="submit"
-                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || isLoadingShipping || Boolean(shippingError))) || (payment === "credit" && Boolean(order)) || order?.payment?.status === "pending" || order?.payment?.status === "in_process"}
+                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || (!isNoFreteSelected && (isLoadingShipping || Boolean(shippingError))))) || (payment === "credit" && Boolean(order)) || order?.payment?.status === "pending" || order?.payment?.status === "in_process"}
                   className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
                     step < 3
                       ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
