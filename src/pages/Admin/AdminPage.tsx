@@ -28,6 +28,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { formatCurrencyReal } from "../../utils/currency";
 import { invalidateProductsCache } from "../../components/ProductList/ProductList";
+import { CouponsPanel } from "./CouponsPanel";
 
 interface ProductFormState {
   id?: number;
@@ -78,18 +79,24 @@ const emptyForm: ProductFormState = {
 export function AdminPage() {
   const { user, loading: loadingAuth } = useAuth();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"products" | "banners" | "payment" | "orders">(() =>
-    searchParams.has("mercadoPago") ? "payment" : "products",
+  const [activeTab, setActiveTab] = useState<
+    "products" | "banners" | "coupons" | "payment" | "orders"
+  >(() => (searchParams.has("mercadoPago") ? "payment" : "products"));
+  const [integration, setIntegration] = useState<MercadoPagoIntegration | null>(
+    null,
   );
-  const [integration, setIntegration] = useState<MercadoPagoIntegration | null>(null);
   const [loadingIntegration, setLoadingIntegration] = useState(false);
   const [integrationError, setIntegrationError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
-  const [superFreteIntegration, setSuperFreteIntegration] = useState<SuperFreteIntegration | null>(null);
+  const [superFreteIntegration, setSuperFreteIntegration] =
+    useState<SuperFreteIntegration | null>(null);
   const [loadingSuperFrete, setLoadingSuperFrete] = useState(false);
   const [superFreteError, setSuperFreteError] = useState("");
   const [isSavingSuperFrete, setIsSavingSuperFrete] = useState(false);
-  const [superFreteForm, setSuperFreteForm] = useState({ token: "", originPostalCode: "" });
+  const [superFreteForm, setSuperFreteForm] = useState({
+    token: "",
+    originPostalCode: "",
+  });
   const [isSuperFreteHelpOpen, setIsSuperFreteHelpOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +115,8 @@ export function AdminPage() {
   const [banners, setBanners] = useState<HeroBanner[]>([]);
   const [loadingBanners, setLoadingBanners] = useState(false);
   const [bannerError, setBannerError] = useState("");
-  const [bannerForm, setBannerForm] = useState<BannerFormState>(emptyBannerForm);
+  const [bannerForm, setBannerForm] =
+    useState<BannerFormState>(emptyBannerForm);
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState("");
   const [isSavingBanner, setIsSavingBanner] = useState(false);
@@ -121,9 +129,9 @@ export function AdminPage() {
     ),
   ).sort((first, second) => first.localeCompare(second, "pt-BR"));
   const filteredCategories = categoryOptions.filter((category) =>
-    category.toLocaleLowerCase("pt-BR").includes(
-      form.category.trim().toLocaleLowerCase("pt-BR"),
-    ),
+    category
+      .toLocaleLowerCase("pt-BR")
+      .includes(form.category.trim().toLocaleLowerCase("pt-BR")),
   );
 
   useEffect(() => {
@@ -151,9 +159,20 @@ export function AdminPage() {
     setBannerError("");
     try {
       const data = await getAdminHeroBanners();
-      setBanners(data.slice().sort((first, second) => Number(first.position ?? 0) - Number(second.position ?? 0)));
+      setBanners(
+        data
+          .slice()
+          .sort(
+            (first, second) =>
+              Number(first.position ?? 0) - Number(second.position ?? 0),
+          ),
+      );
     } catch (error) {
-      setBannerError(error instanceof Error ? error.message : "Não foi possível carregar os banners.");
+      setBannerError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar os banners.",
+      );
     } finally {
       setLoadingBanners(false);
     }
@@ -188,7 +207,11 @@ export function AdminPage() {
       setIntegration(await getMercadoPagoIntegration());
     } catch (error) {
       setIntegration(null);
-      setIntegrationError(error instanceof Error ? error.message : "Não foi possível consultar a conexão.");
+      setIntegrationError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível consultar a conexão.",
+      );
     } finally {
       setLoadingIntegration(false);
     }
@@ -206,7 +229,11 @@ export function AdminPage() {
       }));
     } catch (error) {
       setSuperFreteIntegration(null);
-      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível consultar a conexão.");
+      setSuperFreteError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível consultar a conexão.",
+      );
     } finally {
       setLoadingSuperFrete(false);
     }
@@ -227,7 +254,13 @@ export function AdminPage() {
     setOrdersError("");
     getAdminOrders()
       .then((response) => setOrders(response.orders))
-      .catch((error) => setOrdersError(error instanceof Error ? error.message : "Não foi possível carregar os pedidos."))
+      .catch((error) =>
+        setOrdersError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar os pedidos.",
+        ),
+      )
       .finally(() => setLoadingOrders(false));
   }, [activeTab, isAdmin]);
 
@@ -238,7 +271,11 @@ export function AdminPage() {
       const { authorizationUrl } = await connectMercadoPago();
       window.location.assign(authorizationUrl);
     } catch (error) {
-      setIntegrationError(error instanceof Error ? error.message : "Não foi possível iniciar a conexão.");
+      setIntegrationError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível iniciar a conexão.",
+      );
       setIsConnecting(false);
     }
   };
@@ -251,19 +288,27 @@ export function AdminPage() {
       await disconnectMercadoPago();
       await loadIntegration();
     } catch (error) {
-      setIntegrationError(error instanceof Error ? error.message : "Não foi possível desconectar a conta.");
+      setIntegrationError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível desconectar a conta.",
+      );
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleSaveSuperFrete = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveSuperFrete = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
     const token = superFreteForm.token.trim();
     const originPostalCode = superFreteForm.originPostalCode.replace(/\D/g, "");
 
     if (!token || originPostalCode.length !== 8) {
-      setSuperFreteError("Informe o token e um CEP de origem válido com oito dígitos.");
+      setSuperFreteError(
+        "Informe o token e um CEP de origem válido com oito dígitos.",
+      );
       return;
     }
 
@@ -274,7 +319,11 @@ export function AdminPage() {
       setSuperFreteForm({ token: "", originPostalCode });
       await loadSuperFreteIntegration();
     } catch (error) {
-      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível salvar a conexão.");
+      setSuperFreteError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar a conexão.",
+      );
     } finally {
       setIsSavingSuperFrete(false);
     }
@@ -289,7 +338,11 @@ export function AdminPage() {
       setSuperFreteForm({ token: "", originPostalCode: "" });
       await loadSuperFreteIntegration();
     } catch (error) {
-      setSuperFreteError(error instanceof Error ? error.message : "Não foi possível desconectar a conta.");
+      setSuperFreteError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível desconectar a conta.",
+      );
     } finally {
       setIsSavingSuperFrete(false);
     }
@@ -301,7 +354,9 @@ export function AdminPage() {
     setBannerError("");
   };
 
-  const handleBannerSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleBannerSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
     const position = Number(bannerForm.position);
     if (!Number.isInteger(position) || position < 0) {
@@ -318,7 +373,8 @@ export function AdminPage() {
     try {
       const payload = new FormData();
       if (bannerImage) payload.append("image", bannerImage);
-      if (bannerForm.imageUrl.trim()) payload.append("image_url", bannerForm.imageUrl.trim());
+      if (bannerForm.imageUrl.trim())
+        payload.append("image_url", bannerForm.imageUrl.trim());
       payload.append("redirect_link", bannerForm.redirectLink.trim());
       payload.append("active", bannerForm.active ? "1" : "0");
       payload.append("position", String(position));
@@ -331,7 +387,11 @@ export function AdminPage() {
       resetBannerForm();
       await loadBanners();
     } catch (error) {
-      setBannerError(error instanceof Error ? error.message : "Não foi possível salvar o banner.");
+      setBannerError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar o banner.",
+      );
     } finally {
       setIsSavingBanner(false);
     }
@@ -342,7 +402,8 @@ export function AdminPage() {
       id: banner.id,
       imageUrl: banner.image_url ?? banner.image ?? "",
       redirectLink: banner.redirect_link ?? "",
-      active: banner.active !== 0 && banner.active !== false && banner.active !== "0",
+      active:
+        banner.active !== 0 && banner.active !== false && banner.active !== "0",
       position: String(banner.position ?? 0),
     });
     setBannerImage(null);
@@ -356,7 +417,11 @@ export function AdminPage() {
       if (String(bannerForm.id) === String(id)) resetBannerForm();
       await loadBanners();
     } catch (error) {
-      setBannerError(error instanceof Error ? error.message : "Não foi possível excluir o banner.");
+      setBannerError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível excluir o banner.",
+      );
     }
   };
 
@@ -374,14 +439,22 @@ export function AdminPage() {
     const selectedFiles = Array.from(files);
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-    if (selectedFiles.some((file) => !allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024)) {
+    if (
+      selectedFiles.some(
+        (file) =>
+          !allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024,
+      )
+    ) {
       setSubmitError("Use imagens JPG, PNG, WEBP ou GIF de até 5 MB.");
       if (imageInputRef.current) imageInputRef.current.value = "";
       return;
     }
 
     setImages((current) => {
-      const next = [...current, ...selectedFiles].slice(0, Math.max(0, 10 - savedImages.length));
+      const next = [...current, ...selectedFiles].slice(
+        0,
+        Math.max(0, 10 - savedImages.length),
+      );
       if (savedImages.length + current.length + selectedFiles.length > 10) {
         setSubmitError("Cada produto pode ter no máximo 10 imagens.");
       }
@@ -398,7 +471,9 @@ export function AdminPage() {
     try {
       const weightGrams = Number(form.weightGrams);
       if (!Number.isInteger(weightGrams) || weightGrams <= 0) {
-        throw new Error("Informe o peso em gramas como um número inteiro maior que zero.");
+        throw new Error(
+          "Informe o peso em gramas como um número inteiro maior que zero.",
+        );
       }
 
       const payload = new FormData();
@@ -444,24 +519,29 @@ export function AdminPage() {
       description: product.description ?? "",
       price: String(product.price ?? ""),
       stock: String(product.stock ?? 0),
-      weightGrams: product.weight_grams == null ? "" : String(product.weight_grams),
+      weightGrams:
+        product.weight_grams == null ? "" : String(product.weight_grams),
       active: Boolean(Number(product.active ?? 1)),
       order: Boolean(Number(product.order ?? 0)),
     });
     setImages([]);
     const uploadedImages = (product.uploads ?? [])
       .slice()
-      .sort((first: { position?: number }, second: { position?: number }) => (first.position ?? 0) - (second.position ?? 0))
+      .sort(
+        (first: { position?: number }, second: { position?: number }) =>
+          (first.position ?? 0) - (second.position ?? 0),
+      )
       .map((upload: { id: number | string; url: string }, index: number) => ({
         id: upload.id,
         url: upload.url,
         name: `Imagem ${index + 1}`,
       }));
-    const productImages = uploadedImages.length > 0
-      ? uploadedImages
-      : product.image_url
-        ? [{ id: "cover", url: product.image_url, name: "Imagem" }]
-        : [];
+    const productImages =
+      uploadedImages.length > 0
+        ? uploadedImages
+        : product.image_url
+          ? [{ id: "cover", url: product.image_url, name: "Imagem" }]
+          : [];
     setSavedImages(productImages);
     setExpandedImage(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
@@ -526,10 +606,11 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "products"}
           onClick={() => setActiveTab("products")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "products"
-            ? "bg-roxo-profundo text-branco"
-            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-            }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "products"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
         >
           Produtos
         </button>
@@ -538,12 +619,26 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "banners"}
           onClick={() => setActiveTab("banners")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "banners"
-            ? "bg-roxo-profundo text-branco"
-            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-            }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "banners"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
         >
           Banner
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "coupons"}
+          onClick={() => setActiveTab("coupons")}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "coupons"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
+        >
+          Cupons
         </button>
         <button
           type="button"
@@ -554,10 +649,11 @@ export function AdminPage() {
             void loadIntegration();
             void loadSuperFreteIntegration();
           }}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "payment"
-            ? "bg-roxo-profundo text-branco"
-            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-            }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "payment"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
         >
           Integrações
         </button>
@@ -566,10 +662,11 @@ export function AdminPage() {
           role="tab"
           aria-selected={activeTab === "orders"}
           onClick={() => setActiveTab("orders")}
-          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${activeTab === "orders"
-            ? "bg-roxo-profundo text-branco"
-            : "text-grafite-arroxeado hover:bg-rosa-lais/10"
-            }`}
+          className={`rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === "orders"
+              ? "bg-roxo-profundo text-branco"
+              : "text-grafite-arroxeado hover:bg-rosa-lais/10"
+          }`}
         >
           Pedidos
         </button>
@@ -773,7 +870,13 @@ export function AdminPage() {
                     >
                       <button
                         type="button"
-                        onClick={() => setExpandedImage({ id: `new-${index}`, url: imagePreviews[index] ?? "", name: image.name })}
+                        onClick={() =>
+                          setExpandedImage({
+                            id: `new-${index}`,
+                            url: imagePreviews[index] ?? "",
+                            name: image.name,
+                          })
+                        }
                         className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rosa-lais"
                         aria-label={`Ampliar ${image.name}`}
                       >
@@ -785,7 +888,13 @@ export function AdminPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setImages((current) => current.filter((_, fileIndex) => fileIndex !== index))}
+                        onClick={() =>
+                          setImages((current) =>
+                            current.filter(
+                              (_, fileIndex) => fileIndex !== index,
+                            ),
+                          )
+                        }
                         className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-roxo-profundo/85 text-lg leading-none text-branco shadow-sm transition hover:bg-rosa-lais focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-1"
                         aria-label={`Remover ${image.name}`}
                         title={`Remover ${image.name}`}
@@ -807,7 +916,8 @@ export function AdminPage() {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-cinza-amarronzado">
-                  Adicione até 10 imagens (JPG, PNG, WEBP ou GIF; máximo de 5 MB cada).
+                  Adicione até 10 imagens (JPG, PNG, WEBP ou GIF; máximo de 5 MB
+                  cada).
                 </p>
               </div>
 
@@ -879,10 +989,11 @@ export function AdminPage() {
                           <button
                             type="button"
                             onClick={() => handleToggleOrder(product)}
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.order
-                              ? "bg-rosa-lais text-branco"
-                              : "bg-cinza-quente text-roxo-profundo"
-                              }`}
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              product.order
+                                ? "bg-rosa-lais text-branco"
+                                : "bg-cinza-quente text-roxo-profundo"
+                            }`}
                           >
                             {product.order ? "Encomenda" : "Pronta entrega"}
                           </button>
@@ -928,14 +1039,19 @@ export function AdminPage() {
             </h2>
             <form onSubmit={handleBannerSubmit} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-image">
+                <label
+                  className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                  htmlFor="banner-image"
+                >
                   Imagem do banner
                 </label>
                 <input
                   id="banner-image"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={(event) => setBannerImage(event.target.files?.[0] ?? null)}
+                  onChange={(event) =>
+                    setBannerImage(event.target.files?.[0] ?? null)
+                  }
                   className="w-full rounded-xl border border-dashed border-cinza-quente bg-cream px-4 py-3 text-sm"
                 />
                 <p className="mt-2 text-xs text-cinza-amarronzado">
@@ -944,37 +1060,63 @@ export function AdminPage() {
                 {(bannerPreview || bannerForm.imageUrl) && (
                   <button
                     type="button"
-                    onClick={() => setExpandedImage({ id: "banner-preview", url: bannerPreview || bannerForm.imageUrl, name: "Banner" })}
+                    onClick={() =>
+                      setExpandedImage({
+                        id: "banner-preview",
+                        url: bannerPreview || bannerForm.imageUrl,
+                        name: "Banner",
+                      })
+                    }
                     className="mt-3 block h-36 w-full overflow-hidden rounded-xl border border-cinza-quente bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
                     aria-label="Ampliar prévia do banner"
                   >
-                    <img src={getImageUrl(bannerPreview || bannerForm.imageUrl)} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={getImageUrl(bannerPreview || bannerForm.imageUrl)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   </button>
                 )}
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-image-url">
+                <label
+                  className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                  htmlFor="banner-image-url"
+                >
                   URL da imagem (opcional)
                 </label>
                 <input
                   id="banner-image-url"
                   type="url"
                   value={bannerForm.imageUrl}
-                  onChange={(event) => setBannerForm({ ...bannerForm, imageUrl: event.target.value })}
+                  onChange={(event) =>
+                    setBannerForm({
+                      ...bannerForm,
+                      imageUrl: event.target.value,
+                    })
+                  }
                   placeholder="https://..."
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-redirect-link">
+                <label
+                  className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                  htmlFor="banner-redirect-link"
+                >
                   Link de redirecionamento
                 </label>
                 <input
                   id="banner-redirect-link"
                   value={bannerForm.redirectLink}
-                  onChange={(event) => setBannerForm({ ...bannerForm, redirectLink: event.target.value })}
+                  onChange={(event) =>
+                    setBannerForm({
+                      ...bannerForm,
+                      redirectLink: event.target.value,
+                    })
+                  }
                   placeholder="/produto/exemplo ou https://..."
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                 />
@@ -982,7 +1124,10 @@ export function AdminPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="banner-position">
+                  <label
+                    className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                    htmlFor="banner-position"
+                  >
                     Posição
                   </label>
                   <input
@@ -991,7 +1136,12 @@ export function AdminPage() {
                     min="0"
                     step="1"
                     value={bannerForm.position}
-                    onChange={(event) => setBannerForm({ ...bannerForm, position: event.target.value })}
+                    onChange={(event) =>
+                      setBannerForm({
+                        ...bannerForm,
+                        position: event.target.value,
+                      })
+                    }
                     className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                     required
                   />
@@ -1000,19 +1150,40 @@ export function AdminPage() {
                   <input
                     type="checkbox"
                     checked={bannerForm.active}
-                    onChange={(event) => setBannerForm({ ...bannerForm, active: event.target.checked })}
+                    onChange={(event) =>
+                      setBannerForm({
+                        ...bannerForm,
+                        active: event.target.checked,
+                      })
+                    }
                   />
                   Banner ativo
                 </label>
               </div>
 
-              {bannerError && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{bannerError}</p>}
+              {bannerError && (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {bannerError}
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <button type="submit" disabled={isSavingBanner} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
-                  {isSavingBanner ? "Salvando..." : bannerForm.id ? "Salvar alterações" : "Adicionar banner"}
+                <button
+                  type="submit"
+                  disabled={isSavingBanner}
+                  className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60"
+                >
+                  {isSavingBanner
+                    ? "Salvando..."
+                    : bannerForm.id
+                      ? "Salvar alterações"
+                      : "Adicionar banner"}
                 </button>
-                <button type="button" onClick={resetBannerForm} className="rounded-xl border border-cinza-quente bg-branco px-5 py-3 font-semibold text-grafite-arroxeado">
+                <button
+                  type="button"
+                  onClick={resetBannerForm}
+                  className="rounded-xl border border-cinza-quente bg-branco px-5 py-3 font-semibold text-grafite-arroxeado"
+                >
                   Limpar
                 </button>
               </div>
@@ -1020,27 +1191,73 @@ export function AdminPage() {
           </section>
 
           <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
-            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">Banners cadastrados</h2>
+            <h2 className="mb-6 text-2xl font-semibold text-roxo-profundo">
+              Banners cadastrados
+            </h2>
             {loadingBanners ? (
               <p className="text-cinza-amarronzado">Carregando banners...</p>
             ) : banners.length === 0 ? (
-              <p className="rounded-xl bg-cream p-5 text-sm text-cinza-amarronzado">Nenhum banner cadastrado.</p>
+              <p className="rounded-xl bg-cream p-5 text-sm text-cinza-amarronzado">
+                Nenhum banner cadastrado.
+              </p>
             ) : (
               <div className="space-y-4">
                 {banners.map((banner) => {
-                  const active = banner.active !== 0 && banner.active !== false && banner.active !== "0";
+                  const active =
+                    banner.active !== 0 &&
+                    banner.active !== false &&
+                    banner.active !== "0";
                   return (
-                    <article key={banner.id} className="flex gap-4 rounded-2xl border border-cinza-quente p-3">
-                      <button type="button" onClick={() => setExpandedImage({ id: banner.id, url: banner.image_url ?? banner.image ?? "", name: "Banner" })} className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais" aria-label="Ampliar banner">
-                        <img src={getHeroBannerImageUrl(banner)} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
+                    <article
+                      key={banner.id}
+                      className="flex gap-4 rounded-2xl border border-cinza-quente p-3"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedImage({
+                            id: banner.id,
+                            url: banner.image_url ?? banner.image ?? "",
+                            name: "Banner",
+                          })
+                        }
+                        className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
+                        aria-label="Ampliar banner"
+                      >
+                        <img
+                          src={getHeroBannerImageUrl(banner)}
+                          alt=""
+                          crossOrigin="anonymous"
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-roxo-profundo">Posição {banner.position ?? 0}</p>
-                        <p className="mt-1 truncate text-xs text-cinza-amarronzado">{banner.redirect_link || "Sem redirecionamento"}</p>
-                        <p className={`mt-2 text-xs font-semibold ${active ? "text-emerald-700" : "text-cinza-amarronzado"}`}>{active ? "Ativo" : "Inativo"}</p>
+                        <p className="text-sm font-semibold text-roxo-profundo">
+                          Posição {banner.position ?? 0}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-cinza-amarronzado">
+                          {banner.redirect_link || "Sem redirecionamento"}
+                        </p>
+                        <p
+                          className={`mt-2 text-xs font-semibold ${active ? "text-emerald-700" : "text-cinza-amarronzado"}`}
+                        >
+                          {active ? "Ativo" : "Inativo"}
+                        </p>
                         <div className="mt-3 flex gap-2">
-                          <button type="button" onClick={() => handleEditBanner(banner)} className="rounded-lg border border-cinza-quente px-3 py-1.5 text-xs font-semibold text-grafite-arroxeado hover:bg-cream">Editar</button>
-                          <button type="button" onClick={() => void handleDeleteBanner(banner.id)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Excluir</button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditBanner(banner)}
+                            className="rounded-lg border border-cinza-quente px-3 py-1.5 text-xs font-semibold text-grafite-arroxeado hover:bg-cream"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteBanner(banner.id)}
+                            className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                          >
+                            Excluir
+                          </button>
                         </div>
                       </div>
                     </article>
@@ -1050,6 +1267,8 @@ export function AdminPage() {
             )}
           </section>
         </div>
+      ) : activeTab === "coupons" ? (
+        <CouponsPanel />
       ) : activeTab === "payment" ? (
         <section
           role="tabpanel"
@@ -1061,33 +1280,69 @@ export function AdminPage() {
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-roxo-profundo">Mercado Pago</h2>
-              <p className="mt-2 text-sm text-cinza-amarronzado">A autenticação é feita com segurança no site do Mercado Pago. Nenhuma credencial é informada ou armazenada neste navegador.</p>
+              <h2 className="text-2xl font-semibold text-roxo-profundo">
+                Mercado Pago
+              </h2>
+              <p className="mt-2 text-sm text-cinza-amarronzado">
+                A autenticação é feita com segurança no site do Mercado Pago.
+                Nenhuma credencial é informada ou armazenada neste navegador.
+              </p>
             </div>
             {loadingIntegration ? (
-              <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
+              <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">
+                Consultando...
+              </span>
             ) : (
-              <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${integration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
-                Status: {integration?.connected ? "Conectado ✓" : "Não conectado"}
+              <span
+                className={`rounded-full px-3 py-1.5 text-sm font-semibold ${integration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}
+              >
+                Status:{" "}
+                {integration?.connected ? "Conectado ✓" : "Não conectado"}
               </span>
             )}
           </div>
 
-          {searchParams.has("mercadoPago") && !loadingIntegration && integration?.connected && (
-            <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Conta Mercado Pago conectada com sucesso.</p>
-          )}
-          {searchParams.has("mercadoPago") && !loadingIntegration && !integration?.connected && !integrationError && (
-            <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">A conexão não foi concluída ou foi cancelada. Você pode tentar novamente quando quiser.</p>
-          )}
+          {searchParams.has("mercadoPago") &&
+            !loadingIntegration &&
+            integration?.connected && (
+              <p className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                Conta Mercado Pago conectada com sucesso.
+              </p>
+            )}
+          {searchParams.has("mercadoPago") &&
+            !loadingIntegration &&
+            !integration?.connected &&
+            !integrationError && (
+              <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                A conexão não foi concluída ou foi cancelada. Você pode tentar
+                novamente quando quiser.
+              </p>
+            )}
           {integrationError && (
-            <p className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{integrationError}</p>
+            <p className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {integrationError}
+            </p>
           )}
 
           <div className="mt-8">
             {integration?.connected ? (
-              <button type="button" onClick={handleDisconnectMercadoPago} disabled={isConnecting} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">{isConnecting ? "Desconectando..." : "Desconectar"}</button>
+              <button
+                type="button"
+                onClick={handleDisconnectMercadoPago}
+                disabled={isConnecting}
+                className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60"
+              >
+                {isConnecting ? "Desconectando..." : "Desconectar"}
+              </button>
             ) : (
-              <button type="button" onClick={handleConnectMercadoPago} disabled={loadingIntegration || isConnecting} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">{isConnecting ? "Conectando..." : "Conectar Mercado Pago"}</button>
+              <button
+                type="button"
+                onClick={handleConnectMercadoPago}
+                disabled={loadingIntegration || isConnecting}
+                className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60"
+              >
+                {isConnecting ? "Conectando..." : "Conectar Mercado Pago"}
+              </button>
             )}
           </div>
           <div className="relative mt-10 border-t border-cinza-quente pt-8">
@@ -1101,8 +1356,13 @@ export function AdminPage() {
               ?
             </button>
             {isSuperFreteHelpOpen && (
-              <div role="tooltip" className="absolute right-0 top-16 z-10 w-72 rounded-xl border border-cinza-quente bg-branco p-4 text-sm leading-relaxed text-grafite-arroxeado shadow-lg">
-                Acesse sua conta SuperFrete e procure as opções de integrações ou configurações para gerar e copiar o token de API. Cole-o aqui uma única vez; por segurança, ele não será exibido novamente.
+              <div
+                role="tooltip"
+                className="absolute right-0 top-16 z-10 w-72 rounded-xl border border-cinza-quente bg-branco p-4 text-sm leading-relaxed text-grafite-arroxeado shadow-lg"
+              >
+                Acesse sua conta SuperFrete e procure as opções de integrações
+                ou configurações para gerar e copiar o token de API. Cole-o aqui
+                uma única vez; por segurança, ele não será exibido novamente.
               </div>
             )}
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
@@ -1110,62 +1370,109 @@ export function AdminPage() {
             </p>
             <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-roxo-profundo">SuperFrete</h2>
+                <h2 className="text-2xl font-semibold text-roxo-profundo">
+                  SuperFrete
+                </h2>
                 <p className="mt-2 text-sm text-cinza-amarronzado">
-                  Cole o token gerado na sua conta SuperFrete. Ele é enviado somente para o servidor e nunca é exibido ou salvo neste navegador.
+                  Cole o token gerado na sua conta SuperFrete. Ele é enviado
+                  somente para o servidor e nunca é exibido ou salvo neste
+                  navegador.
                 </p>
               </div>
               {loadingSuperFrete ? (
-                <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">Consultando...</span>
+                <span className="rounded-full bg-cinza-quente px-3 py-1.5 text-sm font-semibold text-grafite-arroxeado">
+                  Consultando...
+                </span>
               ) : (
-                <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${superFreteIntegration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}>
-                  Status: {superFreteIntegration?.connected ? "Conectado" : "Não conectado"}
+                <span
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ${superFreteIntegration?.connected ? "bg-emerald-100 text-emerald-700" : "bg-cinza-quente text-grafite-arroxeado"}`}
+                >
+                  Status:{" "}
+                  {superFreteIntegration?.connected
+                    ? "Conectado"
+                    : "Não conectado"}
                 </span>
               )}
             </div>
 
             {superFreteIntegration?.connected && (
               <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                Integração ativa. CEP de origem: {superFreteIntegration.originPostalCode ?? "não informado"}.
+                Integração ativa. CEP de origem:{" "}
+                {superFreteIntegration.originPostalCode ?? "não informado"}.
               </p>
             )}
             {superFreteError && (
-              <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{superFreteError}</p>
+              <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {superFreteError}
+              </p>
             )}
 
             <form onSubmit={handleSaveSuperFrete} className="mt-8 space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-token">Token secreto</label>
+                <label
+                  className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                  htmlFor="superfrete-token"
+                >
+                  Token secreto
+                </label>
                 <input
                   id="superfrete-token"
                   type="password"
                   autoComplete="off"
                   value={superFreteForm.token}
-                  onChange={(event) => setSuperFreteForm({ ...superFreteForm, token: event.target.value })}
-                  placeholder={superFreteIntegration?.connected ? "Informe outro token para substituir" : "Cole o token da SuperFrete"}
+                  onChange={(event) =>
+                    setSuperFreteForm({
+                      ...superFreteForm,
+                      token: event.target.value,
+                    })
+                  }
+                  placeholder={
+                    superFreteIntegration?.connected
+                      ? "Informe outro token para substituir"
+                      : "Cole o token da SuperFrete"
+                  }
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-grafite-arroxeado" htmlFor="superfrete-origin-postal-code">CEP de origem</label>
+                <label
+                  className="mb-1 block text-sm font-medium text-grafite-arroxeado"
+                  htmlFor="superfrete-origin-postal-code"
+                >
+                  CEP de origem
+                </label>
                 <input
                   id="superfrete-origin-postal-code"
                   inputMode="numeric"
                   autoComplete="postal-code"
                   value={superFreteForm.originPostalCode}
-                  onChange={(event) => setSuperFreteForm({ ...superFreteForm, originPostalCode: event.target.value })}
+                  onChange={(event) =>
+                    setSuperFreteForm({
+                      ...superFreteForm,
+                      originPostalCode: event.target.value,
+                    })
+                  }
                   placeholder="01001-000"
                   className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
                   required
                 />
               </div>
               <div className="flex flex-wrap gap-3 pt-2">
-                <button type="submit" disabled={loadingSuperFrete || isSavingSuperFrete} className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60">
+                <button
+                  type="submit"
+                  disabled={loadingSuperFrete || isSavingSuperFrete}
+                  className="rounded-xl bg-dourado-suave px-5 py-3 font-semibold text-roxo-profundo disabled:opacity-60"
+                >
                   {isSavingSuperFrete ? "Salvando..." : "Salvar conexão"}
                 </button>
                 {superFreteIntegration?.connected && (
-                  <button type="button" onClick={handleDisconnectSuperFrete} disabled={isSavingSuperFrete} className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60">
+                  <button
+                    type="button"
+                    onClick={handleDisconnectSuperFrete}
+                    disabled={isSavingSuperFrete}
+                    className="rounded-xl border border-rose-300 px-5 py-3 font-semibold text-rose-700 disabled:opacity-60"
+                  >
                     Desconectar
                   </button>
                 )}
@@ -1174,48 +1481,115 @@ export function AdminPage() {
           </div>
         </section>
       ) : (
-        <section role="tabpanel" aria-label="Pedidos" className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm sm:p-8">
+        <section
+          role="tabpanel"
+          aria-label="Pedidos"
+          className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm sm:p-8"
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">Pedidos</p>
-              <h2 className="mt-2 text-2xl font-semibold text-roxo-profundo">Todos os pedidos</h2>
-              <p className="mt-2 text-sm text-cinza-amarronzado">Histórico de compras de todos os clientes.</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rosa-lais">
+                Pedidos
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-roxo-profundo">
+                Todos os pedidos
+              </h2>
+              <p className="mt-2 text-sm text-cinza-amarronzado">
+                Histórico de compras de todos os clientes.
+              </p>
             </div>
-            <span className="text-sm text-cinza-amarronzado">{orders.length} pedido{orders.length === 1 ? "" : "s"}</span>
+            <span className="text-sm text-cinza-amarronzado">
+              {orders.length} pedido{orders.length === 1 ? "" : "s"}
+            </span>
           </div>
 
           {loadingOrders ? (
             <p className="mt-8 text-cinza-amarronzado">Carregando pedidos...</p>
           ) : ordersError ? (
-            <p className="mt-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{ordersError}</p>
+            <p className="mt-8 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {ordersError}
+            </p>
           ) : orders.length === 0 ? (
-            <p className="mt-8 rounded-xl border border-cinza-quente bg-cream p-6 text-center text-cinza-amarronzado">Nenhum pedido encontrado.</p>
+            <p className="mt-8 rounded-xl border border-cinza-quente bg-cream p-6 text-center text-cinza-amarronzado">
+              Nenhum pedido encontrado.
+            </p>
           ) : (
             <div className="mt-8 space-y-4">
               {orders.map((order) => {
-                const status = order.status === "paid"
-                  ? { label: "Pago", className: "bg-emerald-100 text-emerald-700" }
-                  : order.status === "cancelled"
-                    ? { label: "Cancelado", className: "bg-rose-100 text-rose-700" }
-                    : { label: "Aguardando pagamento", className: "bg-amber-100 text-amber-800" };
-                const createdAt = order.created_at ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at)) : "—";
-                const paidAt = order.paid_at ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.paid_at)) : null;
+                const status =
+                  order.status === "paid"
+                    ? {
+                        label: "Pago",
+                        className: "bg-emerald-100 text-emerald-700",
+                      }
+                    : order.status === "cancelled"
+                      ? {
+                          label: "Cancelado",
+                          className: "bg-rose-100 text-rose-700",
+                        }
+                      : {
+                          label: "Aguardando pagamento",
+                          className: "bg-amber-100 text-amber-800",
+                        };
+                const createdAt = order.created_at
+                  ? new Intl.DateTimeFormat("pt-BR", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(order.created_at))
+                  : "—";
+                const paidAt = order.paid_at
+                  ? new Intl.DateTimeFormat("pt-BR", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(order.paid_at))
+                  : null;
                 return (
-                  <article key={order.id} className="rounded-2xl border border-cinza-quente p-5">
+                  <article
+                    key={order.id}
+                    className="rounded-2xl border border-cinza-quente p-5"
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cinza-quente pb-4">
                       <div>
-                        <h3 className="font-semibold text-roxo-profundo">Pedido #{order.id}</h3>
-                        <p className="mt-1 text-sm text-grafite-arroxeado">{order.customer.name} · {order.customer.email}</p>
-                        <p className="mt-1 text-xs text-cinza-amarronzado">Cliente #{order.customer.id} · Criado em {createdAt}</p>
+                        <h3 className="font-semibold text-roxo-profundo">
+                          Pedido #{order.id}
+                        </h3>
+                        <p className="mt-1 text-sm text-grafite-arroxeado">
+                          {order.customer.name} · {order.customer.email}
+                        </p>
+                        <p className="mt-1 text-xs text-cinza-amarronzado">
+                          Cliente #{order.customer.id} · Criado em {createdAt}
+                        </p>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}
+                      >
+                        {status.label}
+                      </span>
                     </div>
                     <ul className="mt-4 space-y-2 text-sm text-grafite-arroxeado">
-                      {order.items.map((item) => <li key={item.productId} className="flex flex-wrap justify-between gap-3"><span>{item.quantity}× {item.productName || `Produto #${item.productId}`}</span><span>{formatCurrencyReal(Number(item.subtotal))}</span></li>)}
+                      {order.items.map((item) => (
+                        <li
+                          key={item.productId}
+                          className="flex flex-wrap justify-between gap-3"
+                        >
+                          <span>
+                            {item.quantity}×{" "}
+                            {item.productName || `Produto #${item.productId}`}
+                          </span>
+                          <span>
+                            {formatCurrencyReal(Number(item.subtotal))}
+                          </span>
+                        </li>
+                      ))}
                     </ul>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-cinza-quente pt-4 text-sm">
-                      <span className="text-cinza-amarronzado">{paidAt ? `Pago em ${paidAt}` : "Ainda não pago"}</span>
-                      <span className="text-lg font-bold text-roxo-profundo">{formatCurrencyReal(Number(order.total_amount))} {order.currency}</span>
+                      <span className="text-cinza-amarronzado">
+                        {paidAt ? `Pago em ${paidAt}` : "Ainda não pago"}
+                      </span>
+                      <span className="text-lg font-bold text-roxo-profundo">
+                        {formatCurrencyReal(Number(order.total_amount))}{" "}
+                        {order.currency}
+                      </span>
                     </div>
                   </article>
                 );
@@ -1233,7 +1607,10 @@ export function AdminPage() {
           aria-label={`Visualização ampliada de ${expandedImage.name}`}
           onClick={() => setExpandedImage(null)}
         >
-          <div className="relative max-h-full max-w-full" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="relative max-h-full max-w-full"
+            onClick={(event) => event.stopPropagation()}
+          >
             <img
               src={getImageUrl(expandedImage.url)}
               alt={expandedImage.name}

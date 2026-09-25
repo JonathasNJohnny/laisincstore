@@ -290,7 +290,81 @@ export interface OrderAddress {
 export interface OrderCheckoutData {
   shipping: ShippingQuote;
   address: OrderAddress;
+  couponCode?: string;
 }
+
+export type CouponDiscountType = "FIXED" | "PERCENTAGE";
+export type CouponLimitedBy = "NONE" | "CATEGORY" | "PRODUCT";
+
+export interface Coupon {
+  id: number | string;
+  name: string;
+  code: string;
+  discountType: CouponDiscountType;
+  discountValue: number | string;
+  limitValue?: number | string | null;
+  limitedBy: CouponLimitedBy;
+  limitedProducts: number[];
+  limitedCategories: string[];
+  exceptProducts: number[];
+  maxUses?: number | null;
+  usesPerUser?: number | null;
+  currentUses: number;
+  isActive: boolean;
+  validFrom?: string | null;
+  validUntil?: string | null;
+}
+
+export interface CouponPayload {
+  name: string;
+  code?: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  limitValue?: number;
+  limitedBy: CouponLimitedBy;
+  limitedProducts?: number[];
+  limitedCategories?: string[];
+  exceptProducts?: number[];
+  maxUses?: number;
+  usesPerUser?: number;
+  isActive: boolean;
+  validFrom?: string;
+  validUntil?: string;
+}
+
+type RawCoupon = Omit<Partial<Coupon>, "isActive"> & {
+  discount_type?: CouponDiscountType; discount_value?: number | string; limit_value?: number | string | null;
+  limited_by?: CouponLimitedBy; limited_products?: number[]; limited_categories?: string[]; except_products?: number[];
+  max_uses?: number | null; uses_per_user?: number | null; current_uses?: number; isActive?: boolean | number | string; is_active?: boolean | number | string;
+  valid_from?: string | null; valid_until?: string | null;
+};
+
+function normalizeCoupon(coupon: RawCoupon): Coupon {
+  return {
+    id: coupon.id!, name: coupon.name ?? "", code: coupon.code ?? "",
+    discountType: coupon.discountType ?? coupon.discount_type ?? "PERCENTAGE",
+    discountValue: coupon.discountValue ?? coupon.discount_value ?? 0,
+    limitValue: coupon.limitValue ?? coupon.limit_value ?? null,
+    limitedBy: coupon.limitedBy ?? coupon.limited_by ?? "NONE",
+    limitedProducts: coupon.limitedProducts ?? coupon.limited_products ?? [], limitedCategories: coupon.limitedCategories ?? coupon.limited_categories ?? [],
+    exceptProducts: coupon.exceptProducts ?? coupon.except_products ?? [], maxUses: coupon.maxUses ?? coupon.max_uses ?? null,
+    usesPerUser: coupon.usesPerUser ?? coupon.uses_per_user ?? null, currentUses: Number(coupon.currentUses ?? coupon.current_uses ?? 0),
+    isActive: coupon.isActive === true || coupon.isActive === 1 || coupon.isActive === "1" || coupon.is_active === true || coupon.is_active === 1 || coupon.is_active === "1",
+    validFrom: coupon.validFrom ?? coupon.valid_from ?? null, validUntil: coupon.validUntil ?? coupon.valid_until ?? null,
+  };
+}
+
+export async function getAdminCoupons(page = 1, limit = 20) {
+  const response = await integrationRequest<{ status: string; page: number; limit: number; total: number; coupons: RawCoupon[] }>(`/api/admin/coupons?page=${page}&limit=${limit}`);
+  return { ...response, coupons: (response.coupons ?? []).map(normalizeCoupon) };
+}
+export async function getAdminCoupon(id: number | string) { const r = await integrationRequest<{ coupon: RawCoupon }>(`/api/admin/coupons/${encodeURIComponent(id)}`); return normalizeCoupon(r.coupon); }
+export function createCoupon(payload: CouponPayload) { return integrationRequest<{ coupon: RawCoupon }>("/api/admin/coupons", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); }
+export function updateCoupon(id: number | string, payload: CouponPayload) { return integrationRequest<{ coupon: RawCoupon }>(`/api/admin/coupons/${encodeURIComponent(id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); }
+export function updateCouponStatus(id: number | string, isActive: boolean) { return integrationRequest<void>(`/api/admin/coupons/${encodeURIComponent(id)}/status`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive }) }); }
+export function deleteCoupon(id: number | string) { return integrationRequest<void>(`/api/admin/coupons/${encodeURIComponent(id)}`, { method: "DELETE" }); }
+export interface CouponPreview { couponId: number | string; code: string; totalDiscount: string | number; eligibleSubtotal: string | number; finalAmount: string | number; }
+export function validateCoupon(code: string) { return integrationRequest<CouponPreview>("/api/coupons/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); }
 
 export function createOrder(data: OrderCheckoutData) {
   return integrationRequest<{ status: string; order: Order }>("/api/orders", {

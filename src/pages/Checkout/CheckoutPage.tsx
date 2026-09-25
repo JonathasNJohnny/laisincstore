@@ -21,7 +21,9 @@ import {
   createPixPayment,
   getOrder,
   updateOrder,
+  validateCoupon,
   type CardInstallmentOption,
+  type CouponPreview,
   type Order,
   type PixPayment,
 } from "../../services/api";
@@ -142,6 +144,10 @@ export function CheckoutPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
   const [missingProfileFields, setMissingProfileFields] = useState<
     CheckoutField[]
@@ -161,7 +167,8 @@ export function CheckoutPage() {
   const isNoFreteSelected =
     selectedShipping?.serviceId === noFreteOption.serviceId;
   const shippingCost = selectedShipping?.price || 0;
-  const total = getTotal() + Math.round(shippingCost * 100);
+  const discountedItemsTotal = couponPreview ? Math.round(Number(couponPreview.finalAmount) * 100) : getTotal();
+  const total = discountedItemsTotal + Math.round(shippingCost * 100);
   const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
   const paymentMethod = order?.payment?.method ?? payment;
   const isPixPayment = paymentMethod === "pix";
@@ -479,7 +486,30 @@ export function CheckoutPage() {
       city: formData.city,
       state: formData.state,
     },
+    ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
   });
+
+  const handleValidateCoupon = async () => {
+    const code = couponCode.trim();
+    setCouponPreview(null);
+    setCouponError("");
+    if (!code) return;
+    setIsValidatingCoupon(true);
+    try {
+      setCouponPreview(await validateCoupon(code));
+    } catch (error) {
+      const code = error instanceof ApiRequestError ? error.code : undefined;
+      const messages: Record<string, string> = {
+        COUPON_NOT_FOUND: "Código de cupom inválido.", COUPON_INACTIVE: "Este cupom está indisponível.",
+        COUPON_NOT_STARTED: "Este cupom ainda não está disponível.", COUPON_EXPIRED: "Este cupom expirou.",
+        COUPON_MAX_USES_REACHED: "O limite de uso deste cupom foi atingido.", COUPON_USER_LIMIT_REACHED: "Você já atingiu o limite de uso deste cupom.",
+        COUPON_NO_ELIGIBLE_ITEMS: "Nenhum item do carrinho é elegível para este cupom.", COUPON_INVALID_CODE: "Informe um código de cupom válido.",
+      };
+      setCouponError((code && messages[code]) || (error instanceof Error ? error.message : "Não foi possível validar o cupom."));
+    } finally { setIsValidatingCoupon(false); }
+  };
+
+  useEffect(() => { setCouponPreview(null); setCouponError(""); }, [items]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -1486,14 +1516,33 @@ export function CheckoutPage() {
                       ))}
                 </div>
                 <div className="border-t border-cinza-quete pt-4 space-y-2 text-sm">
+                  {!order && (
+                    <div className="pb-4">
+                      <label htmlFor="coupon-code" className="mb-1 block font-medium text-grafite-arroxeado">Cupom de desconto</label>
+                      <div className="flex gap-2">
+                        <input id="coupon-code" value={couponCode} onChange={(event) => { setCouponCode(event.target.value); setCouponPreview(null); setCouponError(""); }} placeholder="Digite seu código" className="min-w-0 flex-1 rounded-xl border border-cinza-quente bg-cream px-3 py-2 uppercase" />
+                        <button type="button" onClick={() => void handleValidateCoupon()} disabled={isValidatingCoupon || !couponCode.trim()} className="rounded-xl border border-cinza-quente px-3 py-2 font-semibold text-grafite-arroxeado disabled:opacity-60">{isValidatingCoupon ? "..." : "Aplicar"}</button>
+                      </div>
+                      {couponError && <p className="mt-2 text-xs text-rose-700">{couponError}</p>}
+                      {couponPreview && <p className="mt-2 text-xs font-medium text-emerald-700">Cupom {couponPreview.code} aplicado.</p>}
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-cinza-amarronzado">Subtotal</span>
+                    <span className="text-cinza-amarronzado">{couponPreview ? "Subtotal elegível" : "Subtotal"}</span>
                     <span className="font-medium text-grafite-arroxeado">
                       {order
                         ? formatCurrencyReal(orderSubtotal)
-                        : formatCurrency(subtotal)}
+                        : couponPreview
+                          ? formatCurrencyReal(Number(couponPreview.eligibleSubtotal))
+                          : formatCurrency(subtotal)}
                     </span>
                   </div>
+                  {!order && couponPreview && (
+                    <div className="flex justify-between text-emerald-700">
+                      <span>Desconto</span>
+                      <span className="font-medium">- {formatCurrencyReal(Number(couponPreview.totalDiscount))}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-cinza-amarronzado">Frete</span>
                     <span className="font-medium text-grafite-arroxeado">
