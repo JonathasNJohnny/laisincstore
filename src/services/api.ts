@@ -115,11 +115,12 @@ interface ShippingQuoteResponse {
 export async function getShippingQuote(
   destinationPostalCode: string,
   items: Array<{ productId: number | string; quantity: number; weightGrams?: number }>,
+  orderId?: number | string,
 ): Promise<ShippingQuote[]> {
   const response = await integrationRequest<RawShippingQuote[] | ShippingQuoteResponse>("/api/shipping/quote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ destinationPostalCode, items }),
+    body: JSON.stringify({ destinationPostalCode, items, ...(orderId ? { orderId } : {}) }),
   });
 
   const quotes = Array.isArray(response)

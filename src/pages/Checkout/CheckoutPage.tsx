@@ -226,7 +226,7 @@ export function CheckoutPage() {
     if (isContinuingPayment && !orderId) return;
 
     setShipping("");
-    setShippingOptions([]);
+    if (!isContinuingPayment) setShippingOptions([]);
 
     if (!destinationPostalCode) {
       setShippingError("");
@@ -247,6 +247,7 @@ export function CheckoutPage() {
     void getShippingQuote(
       destinationPostalCode,
       shippingQuoteItems,
+      isContinuingPayment ? orderId : undefined,
     )
       .then((options) => {
         if (!active) return;
