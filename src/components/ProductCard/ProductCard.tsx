@@ -94,7 +94,7 @@ export function ProductCard({
 
   return (
     <article
-      className={`group relative min-w-0 bg-branco rounded-2xl border border-cinza-quente overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${className}`}
+      className={`group relative flex h-full min-w-0 flex-col bg-branco rounded-2xl border border-cinza-quente overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${className}`}
     >
       <div className="relative aspect-square overflow-hidden bg-cinza-quente/50">
         <Link
@@ -164,7 +164,7 @@ export function ProductCard({
         )}
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="flex flex-1 flex-col p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <Link to={`/produto/${product.slug}`} className="group">
@@ -190,7 +190,7 @@ export function ProductCard({
         </div>
 
         {showAddToCart && !isOutOfStock && onAddToCart && (
-          <div className="flex w-full min-w-0 flex-col items-stretch gap-3 pt-3">
+          <div className="mt-auto flex w-full min-w-0 flex-col items-stretch gap-3 pt-3">
             <QuantitySelector
               className="self-center"
               value={quantity}
