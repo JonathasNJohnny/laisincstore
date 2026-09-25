@@ -299,19 +299,18 @@ export function CheckoutPage() {
         const resumedOrder = response.order;
         setOrder(resumedOrder);
         const savedAddress = resumedOrder.address;
-        setFormData((current) => ({
-          ...current,
-          name: savedAddress?.recipient ?? current.name,
-          phone: savedAddress?.phone ?? current.phone,
-          cpf: savedAddress?.cpf ?? current.cpf,
-          cep: savedAddress?.postalCode ?? current.cep,
-          address: savedAddress?.street ?? current.address,
-          number: savedAddress?.number ?? current.number,
-          complement: savedAddress?.complement ?? current.complement,
-          neighborhood: savedAddress?.neighborhood ?? current.neighborhood,
-          city: savedAddress?.city ?? current.city,
-          state: savedAddress?.state ?? current.state,
-        }));
+        setFormData({
+          name: savedAddress?.recipient ?? "",
+          phone: savedAddress?.phone ?? "",
+          cpf: savedAddress?.cpf ?? "",
+          cep: savedAddress?.postalCode ?? "",
+          address: savedAddress?.street ?? "",
+          number: savedAddress?.number ?? "",
+          complement: savedAddress?.complement ?? "",
+          neighborhood: savedAddress?.neighborhood ?? "",
+          city: savedAddress?.city ?? "",
+          state: savedAddress?.state ?? "",
+        });
         const savedShipping = resumedOrder.shipping ?? {
           serviceId: "saved_order_shipping",
           name: "Frete selecionado",
