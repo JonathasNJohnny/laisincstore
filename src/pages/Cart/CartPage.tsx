@@ -5,7 +5,7 @@ import { Button } from "../../components/Button/Button";
 import { QuantitySelector } from "../../components/QuantitySelector/QuantitySelector";
 import { useCart } from "../../contexts/CartContext";
 import { formatCurrency, formatCurrencyReal } from "../../utils/currency";
-import { getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
+import { ApiRequestError, getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
 import { getCurrentUser } from "../../services/users";
 
 const CHECKOUT_STORAGE_PREFIX = "laisinc_checkout_missing_fields:";
@@ -72,10 +72,7 @@ export function CartPage() {
     let active = true;
     setIsLoadingShipping(true);
     setShippingError("");
-    void getShippingQuote(
-      destinationPostalCode,
-      items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
-    )
+    void getShippingQuote(destinationPostalCode)
       .then((options) => {
         if (!active) return;
         const lowestPrice = options.reduce<ShippingQuote | null>(
@@ -89,8 +86,13 @@ export function CartPage() {
         }
         setShippingOption(lowestPrice);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
+        if (error instanceof ApiRequestError && error.status === 422) {
+          setShippingOption(null);
+          setShippingError("Frete indisponível: há um produto sem peso cadastrado.");
+          return;
+        }
         setShippingOption(null);
         setShippingError("Não foi possível calcular o frete para este CEP.");
       })

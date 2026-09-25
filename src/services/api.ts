@@ -5,11 +5,13 @@ export const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3017")
 
 export class ApiRequestError extends Error {
   code?: string;
+  status: number;
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, status = 0) {
     super(message);
     this.name = "ApiRequestError";
     this.code = code;
+    this.status = status;
   }
 }
 
@@ -32,7 +34,7 @@ async function integrationRequest<T>(path: string, init: RequestInit = {}): Prom
     const code = data && typeof data === "object" && "code" in data && typeof data.code === "string"
       ? data.code
       : undefined;
-    throw new ApiRequestError(message, code);
+    throw new ApiRequestError(message, code, response.status);
   }
 
   return data as T;
@@ -114,13 +116,12 @@ interface ShippingQuoteResponse {
 
 export async function getShippingQuote(
   destinationPostalCode: string,
-  items: Array<{ productId: number | string; quantity: number; weightGrams?: number }>,
   orderId?: number | string,
 ): Promise<ShippingQuote[]> {
   const response = await integrationRequest<RawShippingQuote[] | ShippingQuoteResponse>("/api/shipping/quote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ destinationPostalCode, items, ...(orderId ? { orderId } : {}) }),
+    body: JSON.stringify({ destinationPostalCode, ...(orderId ? { orderId } : {}) }),
   });
 
   const quotes = Array.isArray(response)
@@ -269,13 +270,8 @@ export function createPixPayment(orderId: number | string) {
   });
 }
 
-export interface OrderShipping {
-  serviceId: number | string;
-  name: string;
-  company: string;
-  price: number;
-  deliveryTime: number;
-  destinationPostalCode: string;
+export interface OrderShipping extends ShippingQuote {
+  destinationPostalCode?: string;
 }
 
 export interface OrderAddress {
@@ -292,7 +288,7 @@ export interface OrderAddress {
 }
 
 export interface OrderCheckoutData {
-  shipping: OrderShipping;
+  shipping: ShippingQuote;
   address: OrderAddress;
 }
 

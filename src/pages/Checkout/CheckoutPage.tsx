@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Truck,
@@ -111,6 +111,7 @@ export function CheckoutPage() {
   const { items, getSubtotal, getTotal, clearCart } = useCart();
   const { user, loading: isAuthLoading } = useAuth();
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const continueOrderId = searchParams.get("continueOrder");
   const isContinuingPayment = Boolean(continueOrderId);
@@ -143,21 +144,11 @@ export function CheckoutPage() {
   const orderEmail = order?.email;
   const orderSubtotal = order?.items.reduce((sum, item) => sum + Number(item.subtotal), 0) ?? 0;
   const orderShippingPrice = Number(order?.shipping_price ?? 0);
+  const orderShippingName = order?.shipping_name;
+  const orderShippingCompany = order?.shipping_company;
   const isOrderInvalid = order?.validOrder === false || order?.isExpired === true;
   const orderExpiry = formatOrderExpiry(order?.expiresAt);
   const userId = user?.id;
-  const orderItemsSignature = order?.items.map((item) => `${item.productId}:${item.quantity}:${item.weightGrams ?? 0}`).join("|") ?? "";
-  const shippingQuoteItems = useMemo(() => {
-    if (isContinuingPayment) {
-      return order?.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        weightGrams: Number(item.weightGrams ?? 0),
-      })) ?? [];
-    }
-    return items.map((item) => ({ productId: item.product.id, quantity: item.quantity }));
-  }, [isContinuingPayment, items, orderItemsSignature]);
-
   useEffect(() => {
     if (!user || isContinuingPayment) return;
 
@@ -244,11 +235,7 @@ export function CheckoutPage() {
     setIsLoadingShipping(true);
     setShippingError("");
 
-    void getShippingQuote(
-      destinationPostalCode,
-      shippingQuoteItems,
-      isContinuingPayment ? orderId : undefined,
-    )
+    void getShippingQuote(destinationPostalCode, isContinuingPayment ? orderId : undefined)
       .then((options) => {
         if (!active) return;
         if (options.length === 0) {
@@ -256,10 +243,25 @@ export function CheckoutPage() {
           return;
         }
         setShippingOptions(options);
-        setShipping(String(options[0].serviceId));
+        const savedOption = isContinuingPayment && orderShippingName
+          ? options.find((option) => option.name === orderShippingName && (!orderShippingCompany || option.company === orderShippingCompany))
+          : undefined;
+        setShipping(String((savedOption ?? options[0]).serviceId));
       })
       .catch((error) => {
         if (!active) return;
+        if (error instanceof ApiRequestError && error.status === 404) {
+          navigate("/perfil/pedidos");
+          return;
+        }
+        if (error instanceof ApiRequestError && error.status === 409) {
+          setShippingError("Este pedido não pode mais ser alterado. Crie um novo pedido.");
+          return;
+        }
+        if (error instanceof ApiRequestError && error.status === 422) {
+          setShippingError("Frete indisponível: há um produto sem peso cadastrado.");
+          return;
+        }
         setShippingError(error instanceof Error ? error.message : "Não foi possível calcular o frete. Verifique o CEP e tente novamente.");
       })
       .finally(() => {
@@ -267,7 +269,7 @@ export function CheckoutPage() {
       });
 
     return () => { active = false; };
-  }, [destinationPostalCode, isContinuingPayment, orderId, shippingQuoteItems]);
+  }, [destinationPostalCode, isContinuingPayment, navigate, orderId, orderShippingCompany, orderShippingName]);
 
   useEffect(() => {
     if (!orderId || orderStatus !== "pending_payment") return;
@@ -312,12 +314,11 @@ export function CheckoutPage() {
           state: savedAddress?.state ?? "",
         });
         const savedShipping = resumedOrder.shipping ?? {
-          serviceId: "saved_order_shipping",
-          name: "Frete selecionado",
-          company: "Pedido original",
+          serviceId: `saved_order_shipping:${resumedOrder.shipping_name ?? "delivery"}`,
+          name: resumedOrder.shipping_name ?? "Entrega",
+          company: resumedOrder.shipping_company ?? "Transportadora",
           price: Number(resumedOrder.shipping_price ?? 0),
-          deliveryTime: 0,
-          destinationPostalCode: savedAddress?.postalCode ?? "",
+          deliveryTime: Number(resumedOrder.shipping_delivery_time ?? 0),
         };
         setShippingOptions([savedShipping]);
         setShipping(String(savedShipping.serviceId));
@@ -377,14 +378,7 @@ export function CheckoutPage() {
   };
 
   const orderDataFromForm = (shippingOption: ShippingQuote) => ({
-    shipping: {
-      serviceId: shippingOption.serviceId,
-      name: shippingOption.name,
-      company: shippingOption.company,
-      price: shippingOption.price,
-      deliveryTime: shippingOption.deliveryTime,
-      destinationPostalCode,
-    },
+    shipping: shippingOption,
     address: {
       recipient: formData.name,
       phone: formData.phone,
