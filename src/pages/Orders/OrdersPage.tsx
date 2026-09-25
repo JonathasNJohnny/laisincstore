@@ -84,10 +84,12 @@ export function OrdersPage() {
       ) : (
         <div className="mt-8 space-y-4">
           {orders.map((order) => {
-            const status = statusInfo[order.status];
+            const invalidOrder = isOrderInvalid(order);
+            const status = invalidOrder
+              ? { label: "Pedido expirado", className: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" }
+              : statusInfo[order.status] ?? statusInfo.pending_payment;
             const canContinue = canContinuePayment(order);
             const paymentIsProcessing = order.payment?.status === "pending" || order.payment?.status === "in_process";
-            const invalidOrder = isOrderInvalid(order);
             return <article key={order.id} className="rounded-2xl border border-cinza-quente bg-branco p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cinza-quente pb-4">
                 <div>
@@ -106,13 +108,12 @@ export function OrdersPage() {
               {order.expiresAt && (
                 <p className="mt-4 text-sm text-cinza-amarronzado">Prazo para pagamento: {formatDate(order.expiresAt)}</p>
               )}
-              {invalidOrder ? (
-                <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Este pedido nao esta mais valido e nao pode receber pagamento.</p>
-              ) : order.status === "paid" && order.pixCopyPaste ? (
+              {order.status === "paid" && order.pixCopyPaste && (
                 <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
                   Pagamento realizado com PIX.
                 </p>
-              ) : order.pixCopyPaste && (
+              )}
+              {order.status !== "paid" && !invalidOrder && order.pixCopyPaste && (
                 <div className="mt-5 rounded-xl border border-dourado-suave/40 bg-dourado-suave/10 p-4">
                   <h3 className="font-semibold text-roxo-profundo">Pagar com PIX</h3>
                   <p className="mt-1 text-sm text-cinza-amarronzado">Escaneie o QR Code ou copie o código para pagar no aplicativo do seu banco.</p>
