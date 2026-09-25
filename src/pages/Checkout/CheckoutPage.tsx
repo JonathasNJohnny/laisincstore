@@ -21,6 +21,7 @@ import {
   createOrder,
   createPixPayment,
   getOrder,
+  updateOrder,
   type Order,
   type PixPayment,
 } from "../../services/api";
@@ -58,7 +59,6 @@ const CHECKOUT_STORAGE_PREFIX = "laisinc_checkout_missing_fields";
 
 const emptyCheckoutForm = {
   name: "",
-  email: "",
   phone: "",
   cpf: "",
   cep: "",
@@ -76,7 +76,6 @@ type CheckoutField = keyof CheckoutForm;
 function checkoutValuesFromUser(currentUser: User): Partial<CheckoutForm> {
   return {
     name: currentUser.recebedor || currentUser.nome || "",
-    email: currentUser.email || "",
     phone: currentUser.telefone || "",
     cpf: currentUser.cpf || "",
     cep: currentUser.cep || "",
@@ -98,6 +97,14 @@ function readStoredCheckoutFields(userId: User["id"]): Partial<CheckoutForm> {
   } catch {
     return {};
   }
+}
+
+function formatOrderExpiry(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function CheckoutPage() {
@@ -136,11 +143,23 @@ export function CheckoutPage() {
   const orderEmail = order?.email;
   const orderSubtotal = order?.items.reduce((sum, item) => sum + Number(item.subtotal), 0) ?? 0;
   const orderShippingPrice = Number(order?.shipping_price ?? 0);
+  const isOrderInvalid = order?.validOrder === false || order?.isExpired === true;
+  const orderExpiry = formatOrderExpiry(order?.expiresAt);
   const userId = user?.id;
-  const payerEmail = formData.email;
+  const orderItemsSignature = order?.items.map((item) => `${item.productId}:${item.quantity}:${item.weightGrams ?? 0}`).join("|") ?? "";
+  const shippingQuoteItems = useMemo(() => {
+    if (isContinuingPayment) {
+      return order?.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        weightGrams: Number(item.weightGrams ?? 0),
+      })) ?? [];
+    }
+    return items.map((item) => ({ productId: item.product.id, quantity: item.quantity }));
+  }, [isContinuingPayment, items, orderItemsSignature]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isContinuingPayment) return;
 
     let active = true;
     const fillCheckoutFromProfile = async () => {
@@ -184,7 +203,7 @@ export function CheckoutPage() {
 
     void fillCheckoutFromProfile();
     return () => { active = false; };
-  }, [user]);
+  }, [isContinuingPayment, user]);
 
   useEffect(() => {
     if (!user || !missingProfileFields.length) return;
@@ -204,7 +223,7 @@ export function CheckoutPage() {
   const destinationPostalCode = formData.cep.replace(/\D/g, "");
 
   useEffect(() => {
-    if (isContinuingPayment) return;
+    if (isContinuingPayment && !orderId) return;
 
     setShipping("");
     setShippingOptions([]);
@@ -227,7 +246,7 @@ export function CheckoutPage() {
 
     void getShippingQuote(
       destinationPostalCode,
-      items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+      shippingQuoteItems,
     )
       .then((options) => {
         if (!active) return;
@@ -247,7 +266,7 @@ export function CheckoutPage() {
       });
 
     return () => { active = false; };
-  }, [destinationPostalCode, isContinuingPayment, items]);
+  }, [destinationPostalCode, isContinuingPayment, orderId, shippingQuoteItems]);
 
   useEffect(() => {
     if (!orderId || orderStatus !== "pending_payment") return;
@@ -278,6 +297,30 @@ export function CheckoutPage() {
         if (!active) return;
         const resumedOrder = response.order;
         setOrder(resumedOrder);
+        const savedAddress = resumedOrder.address;
+        setFormData((current) => ({
+          ...current,
+          name: savedAddress?.recipient ?? current.name,
+          phone: savedAddress?.phone ?? current.phone,
+          cpf: savedAddress?.cpf ?? current.cpf,
+          cep: savedAddress?.postalCode ?? current.cep,
+          address: savedAddress?.street ?? current.address,
+          number: savedAddress?.number ?? current.number,
+          complement: savedAddress?.complement ?? current.complement,
+          neighborhood: savedAddress?.neighborhood ?? current.neighborhood,
+          city: savedAddress?.city ?? current.city,
+          state: savedAddress?.state ?? current.state,
+        }));
+        const savedShipping = resumedOrder.shipping ?? {
+          serviceId: "saved_order_shipping",
+          name: "Frete selecionado",
+          company: "Pedido original",
+          price: Number(resumedOrder.shipping_price ?? 0),
+          deliveryTime: 0,
+          destinationPostalCode: savedAddress?.postalCode ?? "",
+        };
+        setShippingOptions([savedShipping]);
+        setShipping(String(savedShipping.serviceId));
 
         if (resumedOrder.status !== "pending_payment") {
           setPaymentError("Este pedido nao esta disponivel para um novo pagamento.");
@@ -314,7 +357,7 @@ export function CheckoutPage() {
         } else {
           setPayment("pix");
         }
-        setStep(3);
+        setStep(1);
       })
       .catch((error) => {
         if (active) setPaymentError(error instanceof Error ? error.message : "Nao foi possivel carregar este pedido.");
@@ -333,6 +376,29 @@ export function CheckoutPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const orderDataFromForm = (shippingOption: ShippingQuote) => ({
+    shipping: {
+      serviceId: shippingOption.serviceId,
+      name: shippingOption.name,
+      company: shippingOption.company,
+      price: shippingOption.price,
+      deliveryTime: shippingOption.deliveryTime,
+      destinationPostalCode,
+    },
+    address: {
+      recipient: formData.name,
+      phone: formData.phone,
+      cpf: formData.cpf,
+      postalCode: destinationPostalCode,
+      street: formData.address,
+      number: formData.number,
+      complement: formData.complement,
+      neighborhood: formData.neighborhood,
+      city: formData.city,
+      state: formData.state,
+    },
+  });
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (step === 4) return;
@@ -341,6 +407,22 @@ export function CheckoutPage() {
       return;
     }
     if (step < 3) {
+      if (step === 2 && order) {
+        if (order.status !== "pending_payment") {
+          setPaymentError("Este pedido nao pode mais ser alterado.");
+          return;
+        }
+        setIsCreatingPayment(true);
+        try {
+          const response = await updateOrder(order.id, orderDataFromForm(selectedShipping!));
+          setOrder(response.order);
+        } catch (error) {
+          setShippingError(error instanceof Error ? error.message : "Nao foi possivel atualizar o pedido.");
+          return;
+        } finally {
+          setIsCreatingPayment(false);
+        }
+      }
       setStep((prev) => prev + 1);
       return;
     }
@@ -356,14 +438,7 @@ export function CheckoutPage() {
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
-      const createdOrder = order ?? (await createOrder(formData.email, {
-        serviceId: selectedShipping!.serviceId,
-        name: selectedShipping!.name,
-        company: selectedShipping!.company,
-        price: selectedShipping!.price,
-        deliveryTime: selectedShipping!.deliveryTime,
-        destinationPostalCode,
-      })).order;
+      const createdOrder = order ?? (await createOrder(orderDataFromForm(selectedShipping!))).order;
       if (!order) {
         setOrder(createdOrder);
         // O backend limpa o carrinho ao reservar o estoque para este pedido.
@@ -377,7 +452,7 @@ export function CheckoutPage() {
       }
 
       setPixCopied(false);
-      setPixPayment(await createPixPayment(createdOrder.id, formData.email || createdOrder.email));
+      setPixPayment(await createPixPayment(createdOrder.id));
       setStep(4);
     } catch (error) {
       const code = error instanceof ApiRequestError ? error.code : undefined;
@@ -409,7 +484,6 @@ export function CheckoutPage() {
         orderId,
         cardToken: cardData.token,
         paymentMethodId: cardData.payment_method_id,
-        payerEmail: payerEmail || orderEmail || "",
         installments: Number(cardData.installments),
         issuerId: cardData.issuer_id || undefined,
       });
@@ -431,15 +505,15 @@ export function CheckoutPage() {
     } finally {
       setIsCreatingPayment(false);
     }
-  }, [orderId, orderEmail, payerEmail]);
+  }, [orderId]);
 
   const cardPaymentInitialization = useMemo(() => {
     if (orderTotalAmount === undefined) return undefined;
     return {
       amount: Number(orderTotalAmount),
-      payer: { email: payerEmail },
+      payer: { email: orderEmail },
     };
-  }, [orderTotalAmount, payerEmail]);
+  }, [orderTotalAmount, orderEmail]);
 
   const cardPaymentCustomization = useMemo(() => ({
     visual: {
@@ -457,6 +531,18 @@ export function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
         <p className="text-cinza-amarronzado">Carregando pagamento...</p>
+      </div>
+    );
+  }
+
+  if (order && isOrderInvalid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
+        <div className="container max-w-lg text-center">
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Este pedido nao esta mais valido e nao pode receber pagamento.</p>
+          {orderExpiry && <p className="mt-3 text-sm text-cinza-amarronzado">O prazo para pagamento expirou em {orderExpiry}.</p>}
+          <Link to="/perfil/pedidos" className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco">Voltar aos pedidos</Link>
+        </div>
       </div>
     );
   }
@@ -500,7 +586,7 @@ export function CheckoutPage() {
   };
 
   const steps = [
-    { number: 1, label: "Dados" },
+    { number: 1, label: "Recebedor" },
     { number: 2, label: "Entrega" },
     { number: 3, label: "Pagamento" },
     { number: 4, label: "Confirmação" },
@@ -554,6 +640,12 @@ export function CheckoutPage() {
           </ol>
         </nav>
 
+        {isContinuingPayment && orderExpiry && (
+          <p className="mb-6 rounded-xl border border-dourado-suave/40 bg-dourado-suave/10 px-4 py-3 text-sm text-grafite-arroxeado">
+            Este pedido pode ser pago ate {orderExpiry}.
+          </p>
+        )}
+
         <form
           onSubmit={handleSubmit}
           className="grid lg:grid-cols-3 gap-8 lg:gap-12"
@@ -568,7 +660,7 @@ export function CheckoutPage() {
                   id="step1-title"
                   className="font-serif text-xl font-bold text-roxo-profundo mb-6"
                 >
-                  Dados do cliente
+                  Dados do recebedor
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
@@ -583,23 +675,6 @@ export function CheckoutPage() {
                       name="name"
                       type="text"
                       value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-branco border border-cinza-quete rounded-xl text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-grafite-arroxeado mb-1"
-                    >
-                      E-mail *
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
                       onChange={handleInputChange}
                       required
                       className="w-full px-4 py-3 bg-branco border border-cinza-quete rounded-xl text-grafite-arroxeado focus:outline-none focus:ring-2 focus:ring-rosa-lais focus:border-transparent"

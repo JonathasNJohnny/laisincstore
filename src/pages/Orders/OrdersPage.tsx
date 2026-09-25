@@ -19,8 +19,12 @@ function formatDate(value?: string) {
 }
 
 function canContinuePayment(order: Order) {
-  return order.status === "pending_payment" &&
+  return order.status === "pending_payment" && order.validOrder !== false && !order.isExpired && order.canContinuePayment !== false &&
     (!order.payment || ["rejected", "pending", "in_process"].includes(order.payment.status));
+}
+
+function isOrderInvalid(order: Order) {
+  return order.validOrder === false || order.isExpired === true;
 }
 
 function rejectedPaymentMessage(statusDetail?: string | null) {
@@ -83,6 +87,7 @@ export function OrdersPage() {
             const status = statusInfo[order.status];
             const canContinue = canContinuePayment(order);
             const paymentIsProcessing = order.payment?.status === "pending" || order.payment?.status === "in_process";
+            const invalidOrder = isOrderInvalid(order);
             return <article key={order.id} className="rounded-2xl border border-cinza-quente bg-branco p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cinza-quente pb-4">
                 <div>
@@ -98,7 +103,12 @@ export function OrdersPage() {
                 <span className="text-cinza-amarronzado">{order.paid_at ? `Pago em ${formatDate(order.paid_at)}` : "Pagamento ainda não confirmado"}</span>
                 <span className="text-lg font-bold text-roxo-profundo">Total: {formatCurrencyReal(Number(order.total_amount))}</span>
               </div>
-              {order.status === "paid" && order.pixCopyPaste ? (
+              {order.expiresAt && (
+                <p className="mt-4 text-sm text-cinza-amarronzado">Prazo para pagamento: {formatDate(order.expiresAt)}</p>
+              )}
+              {invalidOrder ? (
+                <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Este pedido nao esta mais valido e nao pode receber pagamento.</p>
+              ) : order.status === "paid" && order.pixCopyPaste ? (
                 <p className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
                   Pagamento realizado com PIX.
                 </p>
@@ -119,7 +129,7 @@ export function OrdersPage() {
                   </div>
                 </div>
               )}
-              {order.payment?.status === "rejected" && (
+              {!invalidOrder && order.payment?.status === "rejected" && (
                 <p className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                   {rejectedPaymentMessage(order.payment.statusDetail)}
                 </p>

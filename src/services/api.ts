@@ -114,7 +114,7 @@ interface ShippingQuoteResponse {
 
 export async function getShippingQuote(
   destinationPostalCode: string,
-  items: Array<{ productId: number | string; quantity: number }>,
+  items: Array<{ productId: number | string; quantity: number; weightGrams?: number }>,
 ): Promise<ShippingQuote[]> {
   const response = await integrationRequest<RawShippingQuote[] | ShippingQuoteResponse>("/api/shipping/quote", {
     method: "POST",
@@ -193,7 +193,14 @@ export interface Order {
   currency: string;
   email: string;
   created_at?: string;
+  expiresAt?: string | null;
+  validOrder?: boolean;
+  isExpired?: boolean;
+  canContinuePayment?: boolean;
   paid_at?: string | null;
+  shipping_name?: string | null;
+  shipping_company?: string | null;
+  shipping_delivery_time?: number | null;
   payment?: {
     id: number | string;
     method: "card" | "pix";
@@ -201,11 +208,15 @@ export interface Order {
     statusDetail?: string | null;
     paidAt?: string | null;
   } | null;
+  address?: Partial<OrderAddress> | null;
+  shipping?: OrderShipping | null;
   pixCopyPaste?: string | null;
   items: Array<{
     productId: number | string;
     productName?: string;
+    productSlug?: string;
     image?: string | null;
+    weightGrams?: number | null;
     quantity: number;
     unitPrice: string | number;
     subtotal: string | number;
@@ -238,11 +249,11 @@ export function removeCartItem(productId: number | string) {
   });
 }
 
-export function createPixPayment(orderId: number | string, payerEmail?: string) {
+export function createPixPayment(orderId: number | string) {
   return integrationRequest<PixPaymentApiResponse>("/api/payments/pix", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ orderId, ...(payerEmail ? { payerEmail } : {}) }),
+    body: JSON.stringify({ orderId }),
   }).then((response) => {
     const payment = response.payment ?? response;
     const transactionData = payment.point_of_interaction?.transaction_data;
@@ -266,11 +277,37 @@ export interface OrderShipping {
   destinationPostalCode: string;
 }
 
-export function createOrder(payerEmail: string, shipping: OrderShipping) {
+export interface OrderAddress {
+  recipient: string;
+  phone: string;
+  cpf: string;
+  postalCode: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
+
+export interface OrderCheckoutData {
+  shipping: OrderShipping;
+  address: OrderAddress;
+}
+
+export function createOrder(data: OrderCheckoutData) {
   return integrationRequest<{ status: string; order: Order }>("/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ payerEmail, shipping }),
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateOrder(orderId: number | string, data: OrderCheckoutData) {
+  return integrationRequest<{ status: string; order: Order }>(`/api/orders/${encodeURIComponent(orderId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
 }
 
@@ -301,7 +338,6 @@ export interface CardPaymentPayload {
   orderId: number | string;
   cardToken: string;
   paymentMethodId: string;
-  payerEmail: string;
   installments: number;
   issuerId?: string;
 }
