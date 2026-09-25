@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -18,14 +18,16 @@ import { getCurrentUser, type User } from "../../services/users";
 import {
   ApiRequestError,
   createCardPayment,
+  getCardInstallments,
   createOrder,
   createPixPayment,
   getOrder,
   updateOrder,
+  type CardInstallmentOption,
   type Order,
   type PixPayment,
 } from "../../services/api";
-import { CardPayment, initMercadoPago } from "@mercadopago/sdk-react";
+import { CardPayment, getIssuers, getPaymentMethods, initMercadoPago } from "@mercadopago/sdk-react";
 import { QRCodeSVG } from "qrcode.react";
 
 const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
@@ -122,6 +124,10 @@ export function CheckoutPage() {
   const [shippingError, setShippingError] = useState("");
   const [payment, setPayment] = useState("pix");
   const [paymentError, setPaymentError] = useState("");
+  const [installmentOptions, setInstallmentOptions] = useState<CardInstallmentOption[]>([]);
+  const [selectedInstallments, setSelectedInstallments] = useState<number | null>(null);
+  const [isLoadingInstallments, setIsLoadingInstallments] = useState(false);
+  const [installmentsError, setInstallmentsError] = useState("");
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
@@ -129,6 +135,7 @@ export function CheckoutPage() {
   const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
   const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
   const [isLoadingContinuation, setIsLoadingContinuation] = useState(Boolean(continueOrderId));
+  const installmentsRequest = useRef(0);
 
   const subtotal = getSubtotal();
   const availableShippingOptions = user?.admin ? [...shippingOptions, noFreteOption] : shippingOptions;
@@ -137,6 +144,8 @@ export function CheckoutPage() {
   const shippingCost = selectedShipping?.price || 0;
   const total = getTotal() + Math.round(shippingCost * 100);
   const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
+  const paymentMethod = order?.payment?.method ?? payment;
+  const isPixPayment = paymentMethod === "pix";
   const paymentTotal = order ? Number(order.total_amount) : total / 100;
   const orderId = order?.id;
   const orderStatus = order?.status;
@@ -471,6 +480,10 @@ export function CheckoutPage() {
     issuer_id?: string;
   }) => {
     if (!orderId) return;
+    if (!selectedInstallments) {
+      setPaymentError("Aguarde as opções de parcelamento e escolha uma delas antes de pagar.");
+      return;
+    }
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
@@ -478,7 +491,7 @@ export function CheckoutPage() {
         orderId,
         cardToken: cardData.token,
         paymentMethodId: cardData.payment_method_id,
-        installments: Number(cardData.installments),
+        installments: selectedInstallments,
         issuerId: cardData.issuer_id || undefined,
       });
       setStep(4);
@@ -498,6 +511,44 @@ export function CheckoutPage() {
       setPaymentError(message);
     } finally {
       setIsCreatingPayment(false);
+    }
+  }, [orderId, selectedInstallments]);
+
+  const handleCardBinChange = useCallback(async (bin: string) => {
+    const requestId = ++installmentsRequest.current;
+    setInstallmentOptions([]);
+    setSelectedInstallments(null);
+    setInstallmentsError("");
+
+    if (!orderId || bin.length < 6) {
+      setIsLoadingInstallments(false);
+      return;
+    }
+
+    setIsLoadingInstallments(true);
+    try {
+      const paymentMethods = await getPaymentMethods({ bin });
+      const paymentMethod = paymentMethods?.results[0];
+      if (!paymentMethod) throw new Error("Não identificamos a bandeira deste cartão.");
+
+      const issuers = await getIssuers({ bin, paymentMethodId: paymentMethod.id });
+      const quote = await getCardInstallments({
+        orderId,
+        paymentMethodId: paymentMethod.id,
+        issuerId: issuers?.[0]?.id,
+        bin,
+      });
+      if (requestId !== installmentsRequest.current) return;
+
+      const options = quote.opcoesParcelamento ?? [];
+      setInstallmentOptions(options);
+      setSelectedInstallments(options[0]?.parcelas ?? null);
+      if (!options.length) setInstallmentsError("Não há opções de parcelamento disponíveis para este cartão.");
+    } catch (error) {
+      if (requestId !== installmentsRequest.current) return;
+      setInstallmentsError(error instanceof Error ? error.message : "Não foi possível consultar as parcelas deste cartão.");
+    } finally {
+      if (requestId === installmentsRequest.current) setIsLoadingInstallments(false);
     }
   }, [orderId]);
 
@@ -1021,9 +1072,42 @@ export function CheckoutPage() {
                         locale="pt-BR"
                         onSubmit={handleCardSubmit}
                         onError={handleCardError}
+                        onBinChange={handleCardBinChange}
                       />
                     ) : (
                       <p className="text-sm text-rose-700">Configure VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar pagamento com cartão.</p>
+                    )}
+                    {isLoadingInstallments && (
+                      <p className="mt-4 text-sm text-cinza-amarronzado">Consultando opções de parcelamento...</p>
+                    )}
+                    {installmentOptions.length > 0 && (
+                      <fieldset className="mt-4 rounded-xl border border-cinza-quente p-4 text-left">
+                        <legend className="px-1 text-sm font-semibold text-grafite-arroxeado">Escolha o parcelamento</legend>
+                        <div className="space-y-2">
+                          {installmentOptions.map((option) => (
+                            <label key={option.parcelas} className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-cream">
+                              <input
+                                type="radio"
+                                name="installments"
+                                value={option.parcelas}
+                                checked={selectedInstallments === option.parcelas}
+                                onChange={() => setSelectedInstallments(option.parcelas)}
+                                className="mt-1"
+                              />
+                              <span className="text-sm text-grafite-arroxeado">
+                                <span className="block font-medium">{option.descricao}</span>
+                                <span className="text-cinza-amarronzado">
+                                  {option.parcelas}x de {formatCurrencyReal(option.valorParcela)} · Total {formatCurrencyReal(option.valorTotal)}
+                                  {option.taxaJurosPercentual > 0 ? ` · ${option.taxaJurosPercentual}% de juros` : ""}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
+                    )}
+                    {installmentsError && (
+                      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{installmentsError}</p>
                     )}
                   </div>
                 )}
@@ -1045,11 +1129,11 @@ export function CheckoutPage() {
                   />
                 </div>
                 <h2 id="step4-title" className="font-serif text-2xl font-bold text-roxo-profundo mb-3">
-                  {order?.status === "paid" ? "Pagamento aprovado" : payment === "credit" ? "Pagamento em processamento" : "Pague com Pix"}
+                  {order?.status === "paid" ? "Pagamento aprovado" : paymentMethod === "credit" ? "Pagamento em processamento" : "Pague com Pix"}
                 </h2>
                 <p className="text-cinza-amarronzado mb-6">
                   {order?.status === "paid"
-                    ? "Pagamento realizado com Pix. Obrigada pela compra!"
+                    ? `Pagamento realizado com ${paymentMethod === "credit" ? "cartão de crédito" : "Pix"}. Obrigada pela compra!`
                     : "Seu pagamento está pendente. A confirmação é atualizada automaticamente."}
                 </p>
                 {order?.status !== "paid" && (
@@ -1057,11 +1141,11 @@ export function CheckoutPage() {
                     Valor a pagar: {formatCurrencyReal(paymentTotal)}
                   </p>
                 )}
-                {order?.status !== "paid" && pixCode ? (
+                {isPixPayment && order?.status !== "paid" && pixCode ? (
                   <div className="mx-auto mb-6 flex h-56 w-56 items-center justify-center rounded-xl border border-cinza-quente bg-branco p-3">
                     <QRCodeSVG value={pixCode} size={200} level="M" includeMargin />
                   </div>
-                ) : order?.status !== "paid" && pixPayment?.qrCodeBase64 && (
+                ) : isPixPayment && order?.status !== "paid" && pixPayment?.qrCodeBase64 && (
                   <img
                     alt="QR Code Pix"
                     src={pixPayment.qrCodeBase64.startsWith("data:image/")
@@ -1070,7 +1154,7 @@ export function CheckoutPage() {
                     className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
                   />
                 )}
-                {order?.status !== "paid" && pixCode && (
+                {isPixPayment && order?.status !== "paid" && pixCode && (
                   <div className="mx-auto mb-6 max-w-lg text-left">
                     <label htmlFor="pix-copy-paste" className="mb-2 block text-sm font-semibold text-grafite-arroxeado">
                       Pix copia e cola
@@ -1087,12 +1171,12 @@ export function CheckoutPage() {
                     </button>
                   </div>
                 )}
-                {order?.status !== "paid" && !pixCode && !pixPayment?.qrCodeBase64 && (
+                {isPixPayment && order?.status !== "paid" && !pixCode && !pixPayment?.qrCodeBase64 && (
                   <p role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                     Não foi possível carregar os dados do Pix. Tente gerar o pagamento novamente.
                   </p>
                 )}
-                {order?.status !== "paid" && pixPayment?.ticketUrl && (
+                {isPixPayment && order?.status !== "paid" && pixPayment?.ticketUrl && (
                   <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>
                 )}
                 <div className="flex flex-wrap justify-center gap-3">

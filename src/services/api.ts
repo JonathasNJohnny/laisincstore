@@ -339,6 +339,36 @@ export interface CardPaymentPayload {
   issuerId?: string;
 }
 
+export interface CardInstallmentOption {
+  parcelas: number;
+  valorParcela: number;
+  valorTotal: number;
+  taxaJurosPercentual: number;
+  descricao: string;
+}
+
+export interface CardInstallmentsResponse {
+  orderId: number | string;
+  amount: number;
+  paymentMethodId: string;
+  opcoesParcelamento: CardInstallmentOption[];
+}
+
+export interface CardInstallmentsPayload {
+  orderId: number | string;
+  paymentMethodId: string;
+  issuerId?: string;
+  bin?: string;
+}
+
+export function getCardInstallments(payload: CardInstallmentsPayload) {
+  return integrationRequest<CardInstallmentsResponse>("/api/payments/installments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createCardPayment(payload: CardPaymentPayload) {
   return integrationRequest<PixPayment>("/api/payments/card", {
     method: "POST",
