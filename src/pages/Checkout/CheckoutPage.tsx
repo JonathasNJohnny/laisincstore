@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  Truck,
-  CreditCard,
-  Smartphone,
-  Check,
-} from "lucide-react";
+import { ArrowLeft, Truck, CreditCard, Smartphone, Check } from "lucide-react";
 import { Button } from "../../components/Button/Button";
 import { useCart } from "../../contexts/CartContext";
-import { getImageUrl, getShippingQuote, type ShippingQuote } from "../../services/api";
+import {
+  getImageUrl,
+  getShippingQuote,
+  type ShippingQuote,
+} from "../../services/api";
 import { formatCurrency, formatCurrencyReal } from "../../utils/currency";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -27,7 +25,12 @@ import {
   type Order,
   type PixPayment,
 } from "../../services/api";
-import { CardPayment, getIssuers, getPaymentMethods, initMercadoPago } from "@mercadopago/sdk-react";
+import {
+  CardPayment,
+  getIssuers,
+  getPaymentMethods,
+  initMercadoPago,
+} from "@mercadopago/sdk-react";
 import { QRCodeSVG } from "qrcode.react";
 
 const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
@@ -45,7 +48,7 @@ const paymentMethods = [
     id: "credit",
     icon: CreditCard,
     label: "Cartão de Crédito",
-    description: "Até 6x sem juros",
+    description: "Facilitar seu Pagamento",
   },
 ];
 
@@ -95,7 +98,7 @@ function checkoutStorageKey(userId: User["id"]) {
 function readStoredCheckoutFields(userId: User["id"]): Partial<CheckoutForm> {
   try {
     const stored = localStorage.getItem(checkoutStorageKey(userId));
-    return stored ? JSON.parse(stored) as Partial<CheckoutForm> : {};
+    return stored ? (JSON.parse(stored) as Partial<CheckoutForm>) : {};
   } catch {
     return {};
   }
@@ -106,7 +109,10 @@ function formatOrderExpiry(value?: string | null) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date);
+    : new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(date);
 }
 
 export function CheckoutPage() {
@@ -124,8 +130,12 @@ export function CheckoutPage() {
   const [shippingError, setShippingError] = useState("");
   const [payment, setPayment] = useState("pix");
   const [paymentError, setPaymentError] = useState("");
-  const [installmentOptions, setInstallmentOptions] = useState<CardInstallmentOption[]>([]);
-  const [selectedInstallments, setSelectedInstallments] = useState<number | null>(null);
+  const [installmentOptions, setInstallmentOptions] = useState<
+    CardInstallmentOption[]
+  >([]);
+  const [selectedInstallments, setSelectedInstallments] = useState<
+    number | null
+  >(null);
   const [isLoadingInstallments, setIsLoadingInstallments] = useState(false);
   const [installmentsError, setInstallmentsError] = useState("");
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
@@ -133,14 +143,23 @@ export function CheckoutPage() {
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
   const [formData, setFormData] = useState<CheckoutForm>(emptyCheckoutForm);
-  const [missingProfileFields, setMissingProfileFields] = useState<CheckoutField[]>([]);
-  const [isLoadingContinuation, setIsLoadingContinuation] = useState(Boolean(continueOrderId));
+  const [missingProfileFields, setMissingProfileFields] = useState<
+    CheckoutField[]
+  >([]);
+  const [isLoadingContinuation, setIsLoadingContinuation] = useState(
+    Boolean(continueOrderId),
+  );
   const installmentsRequest = useRef(0);
 
   const subtotal = getSubtotal();
-  const availableShippingOptions = user?.admin ? [...shippingOptions, noFreteOption] : shippingOptions;
-  const selectedShipping = availableShippingOptions.find((s) => String(s.serviceId) === shipping);
-  const isNoFreteSelected = selectedShipping?.serviceId === noFreteOption.serviceId;
+  const availableShippingOptions = user?.admin
+    ? [...shippingOptions, noFreteOption]
+    : shippingOptions;
+  const selectedShipping = availableShippingOptions.find(
+    (s) => String(s.serviceId) === shipping,
+  );
+  const isNoFreteSelected =
+    selectedShipping?.serviceId === noFreteOption.serviceId;
   const shippingCost = selectedShipping?.price || 0;
   const total = getTotal() + Math.round(shippingCost * 100);
   const pixCode = pixPayment?.qrCode ?? order?.pixCopyPaste ?? "";
@@ -151,11 +170,13 @@ export function CheckoutPage() {
   const orderStatus = order?.status;
   const orderTotalAmount = order?.total_amount;
   const orderEmail = order?.email;
-  const orderSubtotal = order?.items.reduce((sum, item) => sum + Number(item.subtotal), 0) ?? 0;
+  const orderSubtotal =
+    order?.items.reduce((sum, item) => sum + Number(item.subtotal), 0) ?? 0;
   const orderShippingPrice = Number(order?.shipping_price ?? 0);
   const orderShippingName = order?.shipping_name;
   const orderShippingCompany = order?.shipping_company;
-  const isOrderInvalid = order?.validOrder === false || order?.isExpired === true;
+  const isOrderInvalid =
+    order?.validOrder === false || order?.isExpired === true;
   const orderExpiry = formatOrderExpiry(order?.expiresAt);
   const userId = user?.id;
   useEffect(() => {
@@ -170,39 +191,47 @@ export function CheckoutPage() {
 
         const profileValues = checkoutValuesFromUser(currentUser);
         const storedValues = readStoredCheckoutFields(currentUser.id);
-        const missingFields = (Object.keys(emptyCheckoutForm) as CheckoutField[]).filter(
-          (field) => !profileValues[field],
-        );
+        const missingFields = (
+          Object.keys(emptyCheckoutForm) as CheckoutField[]
+        ).filter((field) => !profileValues[field]);
 
         setMissingProfileFields(missingFields);
         setFormData((current) => {
           const next = { ...current };
-          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach((field) => {
-            // Dados do cadastro sempre prevalecem; o navegador só completa lacunas.
-            next[field] = profileValues[field] || storedValues[field] || current[field];
-          });
+          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach(
+            (field) => {
+              // Dados do cadastro sempre prevalecem; o navegador só completa lacunas.
+              next[field] =
+                profileValues[field] || storedValues[field] || current[field];
+            },
+          );
           return next;
         });
       } catch {
         // O contexto ainda oferece os dados disponíveis se a atualização falhar.
         const profileValues = checkoutValuesFromUser(user);
         const storedValues = readStoredCheckoutFields(user.id);
-        const missingFields = (Object.keys(emptyCheckoutForm) as CheckoutField[]).filter(
-          (field) => !profileValues[field],
-        );
+        const missingFields = (
+          Object.keys(emptyCheckoutForm) as CheckoutField[]
+        ).filter((field) => !profileValues[field]);
         setMissingProfileFields(missingFields);
         setFormData((current) => {
           const next = { ...current };
-          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach((field) => {
-            next[field] = profileValues[field] || storedValues[field] || current[field];
-          });
+          (Object.keys(emptyCheckoutForm) as CheckoutField[]).forEach(
+            (field) => {
+              next[field] =
+                profileValues[field] || storedValues[field] || current[field];
+            },
+          );
           return next;
         });
       }
     };
 
     void fillCheckoutFromProfile();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [isContinuingPayment, user]);
 
   useEffect(() => {
@@ -214,7 +243,10 @@ export function CheckoutPage() {
         .map((field) => [field, formData[field]]),
     );
     try {
-      localStorage.setItem(checkoutStorageKey(user.id), JSON.stringify(missingValues));
+      localStorage.setItem(
+        checkoutStorageKey(user.id),
+        JSON.stringify(missingValues),
+      );
     } catch {
       // O checkout continua funcional quando o armazenamento não está disponível.
     }
@@ -235,7 +267,9 @@ export function CheckoutPage() {
     }
 
     if (destinationPostalCode.length !== 8) {
-      setShippingError("Informe um CEP válido com oito dígitos para calcular o frete.");
+      setShippingError(
+        "Informe um CEP válido com oito dígitos para calcular o frete.",
+      );
       setIsLoadingShipping(false);
       return;
     }
@@ -244,7 +278,10 @@ export function CheckoutPage() {
     setIsLoadingShipping(true);
     setShippingError("");
 
-    void getShippingQuote(destinationPostalCode, isContinuingPayment ? orderId : undefined)
+    void getShippingQuote(
+      destinationPostalCode,
+      isContinuingPayment ? orderId : undefined,
+    )
       .then((options) => {
         if (!active) return;
         if (options.length === 0) {
@@ -252,9 +289,15 @@ export function CheckoutPage() {
           return;
         }
         setShippingOptions(options);
-        const savedOption = isContinuingPayment && orderShippingName
-          ? options.find((option) => option.name === orderShippingName && (!orderShippingCompany || option.company === orderShippingCompany))
-          : undefined;
+        const savedOption =
+          isContinuingPayment && orderShippingName
+            ? options.find(
+                (option) =>
+                  option.name === orderShippingName &&
+                  (!orderShippingCompany ||
+                    option.company === orderShippingCompany),
+              )
+            : undefined;
         setShipping(String((savedOption ?? options[0]).serviceId));
       })
       .catch((error) => {
@@ -264,21 +307,38 @@ export function CheckoutPage() {
           return;
         }
         if (error instanceof ApiRequestError && error.status === 409) {
-          setShippingError("Este pedido não pode mais ser alterado. Crie um novo pedido.");
+          setShippingError(
+            "Este pedido não pode mais ser alterado. Crie um novo pedido.",
+          );
           return;
         }
         if (error instanceof ApiRequestError && error.status === 422) {
-          setShippingError("Frete indisponível: há um produto sem peso cadastrado.");
+          setShippingError(
+            "Frete indisponível: há um produto sem peso cadastrado.",
+          );
           return;
         }
-        setShippingError(error instanceof Error ? error.message : "Não foi possível calcular o frete. Verifique o CEP e tente novamente.");
+        setShippingError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível calcular o frete. Verifique o CEP e tente novamente.",
+        );
       })
       .finally(() => {
         if (active) setIsLoadingShipping(false);
       });
 
-    return () => { active = false; };
-  }, [destinationPostalCode, isContinuingPayment, navigate, orderId, orderShippingCompany, orderShippingName]);
+    return () => {
+      active = false;
+    };
+  }, [
+    destinationPostalCode,
+    isContinuingPayment,
+    navigate,
+    orderId,
+    orderShippingCompany,
+    orderShippingName,
+  ]);
 
   useEffect(() => {
     if (!orderId || orderStatus !== "pending_payment") return;
@@ -333,12 +393,18 @@ export function CheckoutPage() {
         setShipping(String(savedShipping.serviceId));
 
         if (resumedOrder.status !== "pending_payment") {
-          setPaymentError("Este pedido nao esta disponivel para um novo pagamento.");
+          setPaymentError(
+            "Este pedido nao esta disponivel para um novo pagamento.",
+          );
           return;
         }
 
         const lastPayment = resumedOrder.payment;
-        if (lastPayment?.method === "pix" && lastPayment.status === "pending" && resumedOrder.pixCopyPaste) {
+        if (
+          lastPayment?.method === "pix" &&
+          lastPayment.status === "pending" &&
+          resumedOrder.pixCopyPaste
+        ) {
           setPayment("pix");
           setPixPayment({
             id: lastPayment.id,
@@ -350,9 +416,13 @@ export function CheckoutPage() {
           return;
         }
 
-        const paymentIsProcessing = lastPayment?.status === "pending" || lastPayment?.status === "in_process";
+        const paymentIsProcessing =
+          lastPayment?.status === "pending" ||
+          lastPayment?.status === "in_process";
         if (paymentIsProcessing) {
-          setPaymentError("Seu pagamento esta em processamento. Aguarde a confirmacao antes de tentar novamente.");
+          setPaymentError(
+            "Seu pagamento esta em processamento. Aguarde a confirmacao antes de tentar novamente.",
+          );
           setStep(3);
           return;
         }
@@ -360,9 +430,11 @@ export function CheckoutPage() {
         if (lastPayment?.method === "card") {
           setPayment("credit");
           if (lastPayment.status === "rejected") {
-            setPaymentError(lastPayment.statusDetail === "cc_rejected_insufficient_amount"
-              ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
-              : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.");
+            setPaymentError(
+              lastPayment.statusDetail === "cc_rejected_insufficient_amount"
+                ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
+                : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.",
+            );
           }
         } else {
           setPayment("pix");
@@ -370,13 +442,20 @@ export function CheckoutPage() {
         setStep(1);
       })
       .catch((error) => {
-        if (active) setPaymentError(error instanceof Error ? error.message : "Nao foi possivel carregar este pedido.");
+        if (active)
+          setPaymentError(
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar este pedido.",
+          );
       })
       .finally(() => {
         if (active) setIsLoadingContinuation(false);
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [continueOrderId, isAuthLoading, userId]);
 
   const handleInputChange = (
@@ -405,8 +484,14 @@ export function CheckoutPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (step === 4) return;
-    if (step === 2 && (!shipping || (!isNoFreteSelected && (isLoadingShipping || shippingError)))) {
-      setShippingError(shippingError || "Aguarde o cálculo do frete antes de continuar.");
+    if (
+      step === 2 &&
+      (!shipping ||
+        (!isNoFreteSelected && (isLoadingShipping || shippingError)))
+    ) {
+      setShippingError(
+        shippingError || "Aguarde o cálculo do frete antes de continuar.",
+      );
       return;
     }
     if (step < 3) {
@@ -417,10 +502,17 @@ export function CheckoutPage() {
         }
         setIsCreatingPayment(true);
         try {
-          const response = await updateOrder(order.id, orderDataFromForm(selectedShipping!));
+          const response = await updateOrder(
+            order.id,
+            orderDataFromForm(selectedShipping!),
+          );
           setOrder(response.order);
         } catch (error) {
-          setShippingError(error instanceof Error ? error.message : "Nao foi possivel atualizar o pedido.");
+          setShippingError(
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel atualizar o pedido.",
+          );
           return;
         } finally {
           setIsCreatingPayment(false);
@@ -435,13 +527,17 @@ export function CheckoutPage() {
       return;
     }
     if (!order && (!selectedShipping || destinationPostalCode.length !== 8)) {
-      setPaymentError("Selecione uma opção de frete válida antes de finalizar o pedido.");
+      setPaymentError(
+        "Selecione uma opção de frete válida antes de finalizar o pedido.",
+      );
       return;
     }
     setIsCreatingPayment(true);
     setPaymentError("");
     try {
-      const createdOrder = order ?? (await createOrder(orderDataFromForm(selectedShipping!))).order;
+      const createdOrder =
+        order ??
+        (await createOrder(orderDataFromForm(selectedShipping!))).order;
       if (!order) {
         setOrder(createdOrder);
         // O backend limpa o carrinho ao reservar o estoque para este pedido.
@@ -460,97 +556,131 @@ export function CheckoutPage() {
     } catch (error) {
       const code = error instanceof ApiRequestError ? error.code : undefined;
       const messages: Record<string, string> = {
-        MERCADO_PAGO_NOT_CONNECTED: "O Mercado Pago não está conectado. Avise a administração da loja.",
-        MERCADO_PAGO_RECONNECT_REQUIRED: "A conta Mercado Pago precisa ser conectada novamente.",
+        MERCADO_PAGO_NOT_CONNECTED:
+          "O Mercado Pago não está conectado. Avise a administração da loja.",
+        MERCADO_PAGO_RECONNECT_REQUIRED:
+          "A conta Mercado Pago precisa ser conectada novamente.",
         PAYMENT_ALREADY_PAID: "Este pedido já foi pago.",
         PAYMENT_INVALID_ORDER: "Este pedido não pode ser pago.",
-        PAYMENT_ORDER_NOT_CONFIGURED: "O checkout ainda não foi configurado pela loja.",
-        PAYMENT_PROVIDER_ERROR: "Não foi possível gerar o pagamento agora. Tente novamente.",
+        PAYMENT_ORDER_NOT_CONFIGURED:
+          "O checkout ainda não foi configurado pela loja.",
+        PAYMENT_PROVIDER_ERROR:
+          "Não foi possível gerar o pagamento agora. Tente novamente.",
       };
-      setPaymentError((code && messages[code]) || (error instanceof Error ? error.message : "Não foi possível iniciar o pagamento."));
+      setPaymentError(
+        (code && messages[code]) ||
+          (error instanceof Error
+            ? error.message
+            : "Não foi possível iniciar o pagamento."),
+      );
     } finally {
       setIsCreatingPayment(false);
     }
   };
 
-  const handleCardSubmit = useCallback(async (cardData: {
-    token: string;
-    payment_method_id: string;
-    installments: number;
-    issuer_id?: string;
-  }) => {
-    if (!orderId) return;
-    if (!selectedInstallments) {
-      setPaymentError("Aguarde as opções de parcelamento e escolha uma delas antes de pagar.");
-      return;
-    }
-    setIsCreatingPayment(true);
-    setPaymentError("");
-    try {
-      await createCardPayment({
-        orderId,
-        cardToken: cardData.token,
-        paymentMethodId: cardData.payment_method_id,
-        installments: selectedInstallments,
-        issuerId: cardData.issuer_id || undefined,
-      });
-      setStep(4);
-    } catch (error) {
-      let message = error instanceof Error ? error.message : "Nao foi possivel processar o cartao.";
-      try {
-        const response = await getOrder(orderId);
-        setOrder(response.order);
-        if (response.order.payment?.status === "rejected") {
-          message = response.order.payment.statusDetail === "cc_rejected_insufficient_amount"
-            ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
-            : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.";
-        }
-      } catch {
-        // Mantem a mensagem da tentativa original se a atualizacao do pedido falhar.
+  const handleCardSubmit = useCallback(
+    async (cardData: {
+      token: string;
+      payment_method_id: string;
+      installments: number;
+      issuer_id?: string;
+    }) => {
+      if (!orderId) return;
+      if (!selectedInstallments) {
+        setPaymentError(
+          "Aguarde as opções de parcelamento e escolha uma delas antes de pagar.",
+        );
+        return;
       }
-      setPaymentError(message);
-    } finally {
-      setIsCreatingPayment(false);
-    }
-  }, [orderId, selectedInstallments]);
+      setIsCreatingPayment(true);
+      setPaymentError("");
+      try {
+        await createCardPayment({
+          orderId,
+          cardToken: cardData.token,
+          paymentMethodId: cardData.payment_method_id,
+          installments: selectedInstallments,
+          issuerId: cardData.issuer_id || undefined,
+        });
+        setStep(4);
+      } catch (error) {
+        let message =
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel processar o cartao.";
+        try {
+          const response = await getOrder(orderId);
+          setOrder(response.order);
+          if (response.order.payment?.status === "rejected") {
+            message =
+              response.order.payment.statusDetail ===
+              "cc_rejected_insufficient_amount"
+                ? "Este cartao nao possui limite disponivel. Tente outro cartao ou PIX."
+                : "O pagamento nao foi aprovado. Confira os dados ou tente outra forma de pagamento.";
+          }
+        } catch {
+          // Mantem a mensagem da tentativa original se a atualizacao do pedido falhar.
+        }
+        setPaymentError(message);
+      } finally {
+        setIsCreatingPayment(false);
+      }
+    },
+    [orderId, selectedInstallments],
+  );
 
-  const handleCardBinChange = useCallback(async (bin: string) => {
-    const requestId = ++installmentsRequest.current;
-    setInstallmentOptions([]);
-    setSelectedInstallments(null);
-    setInstallmentsError("");
+  const handleCardBinChange = useCallback(
+    async (bin: string) => {
+      const requestId = ++installmentsRequest.current;
+      setInstallmentOptions([]);
+      setSelectedInstallments(null);
+      setInstallmentsError("");
 
-    if (!orderId || bin.length < 6) {
-      setIsLoadingInstallments(false);
-      return;
-    }
+      if (!orderId || bin.length < 6) {
+        setIsLoadingInstallments(false);
+        return;
+      }
 
-    setIsLoadingInstallments(true);
-    try {
-      const paymentMethods = await getPaymentMethods({ bin });
-      const paymentMethod = paymentMethods?.results[0];
-      if (!paymentMethod) throw new Error("Não identificamos a bandeira deste cartão.");
+      setIsLoadingInstallments(true);
+      try {
+        const paymentMethods = await getPaymentMethods({ bin });
+        const paymentMethod = paymentMethods?.results[0];
+        if (!paymentMethod)
+          throw new Error("Não identificamos a bandeira deste cartão.");
 
-      const issuers = await getIssuers({ bin, paymentMethodId: paymentMethod.id });
-      const quote = await getCardInstallments({
-        orderId,
-        paymentMethodId: paymentMethod.id,
-        issuerId: issuers?.[0]?.id,
-        bin,
-      });
-      if (requestId !== installmentsRequest.current) return;
+        const issuers = await getIssuers({
+          bin,
+          paymentMethodId: paymentMethod.id,
+        });
+        const quote = await getCardInstallments({
+          orderId,
+          paymentMethodId: paymentMethod.id,
+          issuerId: issuers?.[0]?.id,
+          bin,
+        });
+        if (requestId !== installmentsRequest.current) return;
 
-      const options = quote.opcoesParcelamento ?? [];
-      setInstallmentOptions(options);
-      setSelectedInstallments(options[0]?.parcelas ?? null);
-      if (!options.length) setInstallmentsError("Não há opções de parcelamento disponíveis para este cartão.");
-    } catch (error) {
-      if (requestId !== installmentsRequest.current) return;
-      setInstallmentsError(error instanceof Error ? error.message : "Não foi possível consultar as parcelas deste cartão.");
-    } finally {
-      if (requestId === installmentsRequest.current) setIsLoadingInstallments(false);
-    }
-  }, [orderId]);
+        const options = quote.opcoesParcelamento ?? [];
+        setInstallmentOptions(options);
+        setSelectedInstallments(options[0]?.parcelas ?? null);
+        if (!options.length)
+          setInstallmentsError(
+            "Não há opções de parcelamento disponíveis para este cartão.",
+          );
+      } catch (error) {
+        if (requestId !== installmentsRequest.current) return;
+        setInstallmentsError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível consultar as parcelas deste cartão.",
+        );
+      } finally {
+        if (requestId === installmentsRequest.current)
+          setIsLoadingInstallments(false);
+      }
+    },
+    [orderId],
+  );
 
   const cardPaymentInitialization = useMemo(() => {
     if (orderTotalAmount === undefined) return undefined;
@@ -560,13 +690,16 @@ export function CheckoutPage() {
     };
   }, [orderTotalAmount, orderEmail]);
 
-  const cardPaymentCustomization = useMemo(() => ({
-    visual: {
-      style: {
-        theme: theme === "dark" ? "dark" : "default",
+  const cardPaymentCustomization = useMemo(
+    () => ({
+      visual: {
+        style: {
+          theme: theme === "dark" ? "dark" : "default",
+        },
       },
-    },
-  }), [theme]);
+    }),
+    [theme],
+  );
 
   const handleCardError = useCallback(() => {
     setPaymentError("Nao foi possivel carregar o formulario de cartao.");
@@ -584,9 +717,20 @@ export function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
         <div className="container max-w-lg text-center">
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">Este pedido expirou.</p>
-          {orderExpiry && <p className="mt-3 text-sm text-cinza-amarronzado">O prazo para pagamento expirou em {orderExpiry}.</p>}
-          <Link to="/perfil/pedidos" className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco">Voltar aos pedidos</Link>
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            Este pedido expirou.
+          </p>
+          {orderExpiry && (
+            <p className="mt-3 text-sm text-cinza-amarronzado">
+              O prazo para pagamento expirou em {orderExpiry}.
+            </p>
+          )}
+          <Link
+            to="/perfil/pedidos"
+            className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco"
+          >
+            Voltar aos pedidos
+          </Link>
         </div>
       </div>
     );
@@ -596,8 +740,15 @@ export function CheckoutPage() {
     return (
       <div className="min-h-screen flex items-center justify-center py-16 lg:py-24">
         <div className="container max-w-lg text-center">
-          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{paymentError || "Nao foi possivel carregar este pagamento."}</p>
-          <Link to="/perfil/pedidos" className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco">Voltar aos pedidos</Link>
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {paymentError || "Nao foi possivel carregar este pagamento."}
+          </p>
+          <Link
+            to="/perfil/pedidos"
+            className="mt-5 inline-flex rounded-xl bg-rosa-lais px-4 py-2.5 font-semibold text-branco"
+          >
+            Voltar aos pedidos
+          </Link>
         </div>
       </div>
     );
@@ -949,15 +1100,20 @@ export function CheckoutPage() {
                     </p>
                   )}
                   {shippingError && (
-                    <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    <p
+                      role="alert"
+                      className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                    >
                       {shippingError}
                     </p>
                   )}
-                  {!isLoadingShipping && !shippingError && !destinationPostalCode && (
-                    <p className="mb-4 rounded-xl bg-cream px-4 py-3 text-sm text-cinza-amarronzado">
-                      Informe o CEP de entrega para ver as opções de frete.
-                    </p>
-                  )}
+                  {!isLoadingShipping &&
+                    !shippingError &&
+                    !destinationPostalCode && (
+                      <p className="mb-4 rounded-xl bg-cream px-4 py-3 text-sm text-cinza-amarronzado">
+                        Informe o CEP de entrega para ver as opções de frete.
+                      </p>
+                    )}
                   <div
                     className="space-y-3"
                     role="radiogroup"
@@ -978,7 +1134,10 @@ export function CheckoutPage() {
                           value={String(option.serviceId)}
                           checked={shipping === String(option.serviceId)}
                           onChange={() => setShipping(String(option.serviceId))}
-                          disabled={isLoadingShipping && option.serviceId !== noFreteOption.serviceId}
+                          disabled={
+                            isLoadingShipping &&
+                            option.serviceId !== noFreteOption.serviceId
+                          }
                           className="sr-only"
                           aria-label={option.name}
                         />
@@ -994,7 +1153,10 @@ export function CheckoutPage() {
                             </span>
                           </div>
                           <p className="text-sm text-cinza-amarronzado mt-1">
-                            {option.company} · {option.deliveryTime} {option.deliveryTime === 1 ? "dia útil" : "dias úteis"}
+                            {option.company} · {option.deliveryTime}{" "}
+                            {option.deliveryTime === 1
+                              ? "dia útil"
+                              : "dias úteis"}
                           </p>
                         </div>
                         <Truck
@@ -1060,7 +1222,8 @@ export function CheckoutPage() {
 
                 {payment === "credit" && !order && (
                   <p className="mt-6 text-sm text-cinza-amarronzado">
-                    Confirme para criar o pedido e carregar o formulário seguro do Mercado Pago.
+                    Confirme para criar o pedido e carregar o formulário seguro
+                    do Mercado Pago.
                   </p>
                 )}
                 {payment === "credit" && order && (
@@ -1075,30 +1238,50 @@ export function CheckoutPage() {
                         onBinChange={handleCardBinChange}
                       />
                     ) : (
-                      <p className="text-sm text-rose-700">Configure VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar pagamento com cartão.</p>
+                      <p className="text-sm text-rose-700">
+                        Configure VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar
+                        pagamento com cartão.
+                      </p>
                     )}
                     {isLoadingInstallments && (
-                      <p className="mt-4 text-sm text-cinza-amarronzado">Consultando opções de parcelamento...</p>
+                      <p className="mt-4 text-sm text-cinza-amarronzado">
+                        Consultando opções de parcelamento...
+                      </p>
                     )}
                     {installmentOptions.length > 0 && (
                       <fieldset className="mt-4 rounded-xl border border-cinza-quente p-4 text-left">
-                        <legend className="px-1 text-sm font-semibold text-grafite-arroxeado">Escolha o parcelamento</legend>
+                        <legend className="px-1 text-sm font-semibold text-grafite-arroxeado">
+                          Escolha o parcelamento
+                        </legend>
                         <div className="space-y-2">
                           {installmentOptions.map((option) => (
-                            <label key={option.parcelas} className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-cream">
+                            <label
+                              key={option.parcelas}
+                              className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-cream"
+                            >
                               <input
                                 type="radio"
                                 name="installments"
                                 value={option.parcelas}
-                                checked={selectedInstallments === option.parcelas}
-                                onChange={() => setSelectedInstallments(option.parcelas)}
+                                checked={
+                                  selectedInstallments === option.parcelas
+                                }
+                                onChange={() =>
+                                  setSelectedInstallments(option.parcelas)
+                                }
                                 className="mt-1"
                               />
                               <span className="text-sm text-grafite-arroxeado">
-                                <span className="block font-medium">{option.descricao}</span>
+                                <span className="block font-medium">
+                                  {option.descricao}
+                                </span>
                                 <span className="text-cinza-amarronzado">
-                                  {option.parcelas}x de {formatCurrencyReal(option.valorParcela)} · Total {formatCurrencyReal(option.valorTotal)}
-                                  {option.taxaJurosPercentual > 0 ? ` · ${option.taxaJurosPercentual}% de juros` : ""}
+                                  {option.parcelas}x de{" "}
+                                  {formatCurrencyReal(option.valorParcela)} ·
+                                  Total {formatCurrencyReal(option.valorTotal)}
+                                  {option.taxaJurosPercentual > 0
+                                    ? ` · ${option.taxaJurosPercentual}% de juros`
+                                    : ""}
                                 </span>
                               </span>
                             </label>
@@ -1107,12 +1290,16 @@ export function CheckoutPage() {
                       </fieldset>
                     )}
                     {installmentsError && (
-                      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{installmentsError}</p>
+                      <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {installmentsError}
+                      </p>
                     )}
                   </div>
                 )}
                 {paymentError && (
-                  <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{paymentError}</p>
+                  <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {paymentError}
+                  </p>
                 )}
               </section>
             )}
@@ -1128,8 +1315,15 @@ export function CheckoutPage() {
                     aria-hidden="true"
                   />
                 </div>
-                <h2 id="step4-title" className="font-serif text-2xl font-bold text-roxo-profundo mb-3">
-                  {order?.status === "paid" ? "Pagamento aprovado" : paymentMethod === "credit" ? "Pagamento em processamento" : "Pague com Pix"}
+                <h2
+                  id="step4-title"
+                  className="font-serif text-2xl font-bold text-roxo-profundo mb-3"
+                >
+                  {order?.status === "paid"
+                    ? "Pagamento aprovado"
+                    : paymentMethod === "credit"
+                      ? "Pagamento em processamento"
+                      : "Pague com Pix"}
                 </h2>
                 <p className="text-cinza-amarronzado mb-6">
                   {order?.status === "paid"
@@ -1143,20 +1337,34 @@ export function CheckoutPage() {
                 )}
                 {isPixPayment && order?.status !== "paid" && pixCode ? (
                   <div className="mx-auto mb-6 flex h-56 w-56 items-center justify-center rounded-xl border border-cinza-quente bg-branco p-3">
-                    <QRCodeSVG value={pixCode} size={200} level="M" includeMargin />
+                    <QRCodeSVG
+                      value={pixCode}
+                      size={200}
+                      level="M"
+                      includeMargin
+                    />
                   </div>
-                ) : isPixPayment && order?.status !== "paid" && pixPayment?.qrCodeBase64 && (
-                  <img
-                    alt="QR Code Pix"
-                    src={pixPayment.qrCodeBase64.startsWith("data:image/")
-                      ? pixPayment.qrCodeBase64
-                      : `data:image/png;base64,${pixPayment.qrCodeBase64}`}
-                    className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
-                  />
+                ) : (
+                  isPixPayment &&
+                  order?.status !== "paid" &&
+                  pixPayment?.qrCodeBase64 && (
+                    <img
+                      alt="QR Code Pix"
+                      src={
+                        pixPayment.qrCodeBase64.startsWith("data:image/")
+                          ? pixPayment.qrCodeBase64
+                          : `data:image/png;base64,${pixPayment.qrCodeBase64}`
+                      }
+                      className="mx-auto mb-6 h-56 w-56 rounded-xl border border-cinza-quente object-contain"
+                    />
+                  )
                 )}
                 {isPixPayment && order?.status !== "paid" && pixCode && (
                   <div className="mx-auto mb-6 max-w-lg text-left">
-                    <label htmlFor="pix-copy-paste" className="mb-2 block text-sm font-semibold text-grafite-arroxeado">
+                    <label
+                      htmlFor="pix-copy-paste"
+                      className="mb-2 block text-sm font-semibold text-grafite-arroxeado"
+                    >
                       Pix copia e cola
                     </label>
                     <textarea
@@ -1166,19 +1374,39 @@ export function CheckoutPage() {
                       rows={4}
                       className="w-full resize-none rounded-xl border border-cinza-quente bg-cream p-3 text-xs text-grafite-arroxeado"
                     />
-                    <button type="button" onClick={() => void copyPixCode()} className="mt-3 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado">
+                    <button
+                      type="button"
+                      onClick={() => void copyPixCode()}
+                      className="mt-3 rounded-xl border border-cinza-quente px-4 py-2 text-sm font-semibold text-grafite-arroxeado"
+                    >
                       {pixCopied ? "Código Pix copiado" : "Copiar código Pix"}
                     </button>
                   </div>
                 )}
-                {isPixPayment && order?.status !== "paid" && !pixCode && !pixPayment?.qrCodeBase64 && (
-                  <p role="alert" className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    Não foi possível carregar os dados do Pix. Tente gerar o pagamento novamente.
-                  </p>
-                )}
-                {isPixPayment && order?.status !== "paid" && pixPayment?.ticketUrl && (
-                  <a href={pixPayment.ticketUrl} target="_blank" rel="noreferrer" className="mb-6 block text-sm font-semibold text-rosa-lais underline">Abrir pagamento em nova aba</a>
-                )}
+                {isPixPayment &&
+                  order?.status !== "paid" &&
+                  !pixCode &&
+                  !pixPayment?.qrCodeBase64 && (
+                    <p
+                      role="alert"
+                      className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                    >
+                      Não foi possível carregar os dados do Pix. Tente gerar o
+                      pagamento novamente.
+                    </p>
+                  )}
+                {isPixPayment &&
+                  order?.status !== "paid" &&
+                  pixPayment?.ticketUrl && (
+                    <a
+                      href={pixPayment.ticketUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-6 block text-sm font-semibold text-rosa-lais underline"
+                    >
+                      Abrir pagamento em nova aba
+                    </a>
+                  )}
                 <div className="flex flex-wrap justify-center gap-3">
                   <Button
                     variant="primary"
@@ -1199,117 +1427,146 @@ export function CheckoutPage() {
           </div>
 
           {step !== 4 && (
-          <aside className="lg:col-span-1">
-            <div className="sticky top-24 bg-branco rounded-2xl border border-cinza-quete p-6 shadow-sm">
-              <h3 className="font-serif text-lg font-bold text-roxo-profundo mb-4">
-                Resumo do pedido
-              </h3>
-              <div className="space-y-3 mb-4">
-                {order ? order.items.map((item) => (
-                  <div key={item.productId} className="flex gap-3">
-                    {item.image ? (
-                      <img
-                        src={getImageUrl(item.image)}
-                        alt=""
-                        crossOrigin="anonymous"
-                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-rosa-lais/10 text-xs font-semibold text-rosa-lais">Item</div>
-                    )}
-                    <div className="flex-1 min-w-0 text-sm">
-                      <p className="font-medium text-grafite-arroxeado truncate">
-                        {item.productName || `Produto #${item.productId}`}
-                      </p>
-                      <p className="text-cinza-amarronzado">Qtd: {item.quantity}</p>
-                      <p className="font-medium text-rosa-lais">{formatCurrencyReal(Number(item.subtotal))}</p>
-                    </div>
+            <aside className="lg:col-span-1">
+              <div className="sticky top-24 bg-branco rounded-2xl border border-cinza-quete p-6 shadow-sm">
+                <h3 className="font-serif text-lg font-bold text-roxo-profundo mb-4">
+                  Resumo do pedido
+                </h3>
+                <div className="space-y-3 mb-4">
+                  {order
+                    ? order.items.map((item) => (
+                        <div key={item.productId} className="flex gap-3">
+                          {item.image ? (
+                            <img
+                              src={getImageUrl(item.image)}
+                              alt=""
+                              crossOrigin="anonymous"
+                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-rosa-lais/10 text-xs font-semibold text-rosa-lais">
+                              Item
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0 text-sm">
+                            <p className="font-medium text-grafite-arroxeado truncate">
+                              {item.productName || `Produto #${item.productId}`}
+                            </p>
+                            <p className="text-cinza-amarronzado">
+                              Qtd: {item.quantity}
+                            </p>
+                            <p className="font-medium text-rosa-lais">
+                              {formatCurrencyReal(Number(item.subtotal))}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    : items.map((item) => (
+                        <div key={item.product.id} className="flex gap-3">
+                          <img
+                            src={getImageUrl(item.product.image)}
+                            alt=""
+                            crossOrigin="anonymous"
+                            className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0 text-sm">
+                            <p className="font-medium text-grafite-arroxeado truncate">
+                              {item.product.name}
+                            </p>
+                            <p className="text-cinza-amarronzado">
+                              Qtd: {item.quantity}
+                            </p>
+                            <p className="font-medium text-rosa-lais">
+                              {formatCurrency(
+                                item.product.price * item.quantity,
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                </div>
+                <div className="border-t border-cinza-quete pt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-cinza-amarronzado">Subtotal</span>
+                    <span className="font-medium text-grafite-arroxeado">
+                      {order
+                        ? formatCurrencyReal(orderSubtotal)
+                        : formatCurrency(subtotal)}
+                    </span>
                   </div>
-                )) : items.map((item) => (
-                  <div key={item.product.id} className="flex gap-3">
-                    <img
-                      src={getImageUrl(item.product.image)}
-                      alt=""
-                      crossOrigin="anonymous"
-                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0 text-sm">
-                      <p className="font-medium text-grafite-arroxeado truncate">
-                        {item.product.name}
-                      </p>
-                      <p className="text-cinza-amarronzado">
-                        Qtd: {item.quantity}
-                      </p>
-                      <p className="font-medium text-rosa-lais">
-                        {formatCurrency(item.product.price * item.quantity)}
-                      </p>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-cinza-amarronzado">Frete</span>
+                    <span className="font-medium text-grafite-arroxeado">
+                      {order
+                        ? orderShippingPrice === 0
+                          ? "Grátis"
+                          : formatCurrencyReal(orderShippingPrice)
+                        : !selectedShipping
+                          ? "A calcular"
+                          : shippingCost === 0
+                            ? "Grátis"
+                            : formatCurrencyReal(shippingCost)}
+                    </span>
                   </div>
-                ))}
-              </div>
-              <div className="border-t border-cinza-quete pt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-cinza-amarronzado">Subtotal</span>
-                  <span className="font-medium text-grafite-arroxeado">
-                    {order ? formatCurrencyReal(orderSubtotal) : formatCurrency(subtotal)}
-                  </span>
+                  <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-2 border-t border-cinza-quete">
+                    <span>Total</span>
+                    <span>
+                      {order
+                        ? formatCurrencyReal(Number(order.total_amount))
+                        : formatCurrency(total)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-cinza-amarronzado">Frete</span>
-                  <span className="font-medium text-grafite-arroxeado">
-                    {order
-                      ? orderShippingPrice === 0
-                        ? "GrÃ¡tis"
-                        : formatCurrencyReal(orderShippingPrice)
-                      : !selectedShipping
-                      ? "A calcular"
-                      : shippingCost === 0
-                      ? "Grátis"
-                      : formatCurrencyReal(shippingCost)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold text-roxo-profundo pt-2 border-t border-cinza-quete">
-                  <span>Total</span>
-                  <span>{order ? formatCurrencyReal(Number(order.total_amount)) : formatCurrency(total)}</span>
-                </div>
-              </div>
 
-              <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
-                <button
-                  type="submit"
-                  disabled={isCreatingPayment || step === 4 || (step === 2 && (!shipping || (!isNoFreteSelected && (isLoadingShipping || Boolean(shippingError))))) || (payment === "credit" && Boolean(order)) || order?.payment?.status === "pending" || order?.payment?.status === "in_process"}
-                  className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
-                    step < 3
-                      ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
-                      : step === 3
-                        ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
-                        : "bg-rosa-lais text-branco hover:bg-rosa-lais/90"
-                  }`}
-                >
-                  {step < 3
-                    ? "Continuar"
-                    : step === 3
-                      ? isCreatingPayment
-                        ? "Processando..."
-                        : order?.payment?.status === "pending" || order?.payment?.status === "in_process"
-                          ? "Pagamento em processamento"
-                        : payment === "credit"
-                          ? order ? "Preencha o cartão abaixo" : "Continuar para cartão"
-                          : "Gerar Pix"
-                      : "Ver pedido"}
-                </button>
-                {step > 1 && (
+                <div className="mt-6 pt-6 border-t border-cinza-quete space-y-2">
                   <button
-                    type="button"
-                    onClick={() => setStep((prev) => prev - 1)}
-                    className="w-full py-3 rounded-xl font-medium text-sm text-cinza-amarronzado hover:text-rosa-lais transition-colors"
+                    type="submit"
+                    disabled={
+                      isCreatingPayment ||
+                      step === 4 ||
+                      (step === 2 &&
+                        (!shipping ||
+                          (!isNoFreteSelected &&
+                            (isLoadingShipping || Boolean(shippingError))))) ||
+                      (payment === "credit" && Boolean(order)) ||
+                      order?.payment?.status === "pending" ||
+                      order?.payment?.status === "in_process"
+                    }
+                    className={`w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
+                      step < 3
+                        ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
+                        : step === 3
+                          ? "bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90"
+                          : "bg-rosa-lais text-branco hover:bg-rosa-lais/90"
+                    }`}
                   >
-                    Voltar
+                    {step < 3
+                      ? "Continuar"
+                      : step === 3
+                        ? isCreatingPayment
+                          ? "Processando..."
+                          : order?.payment?.status === "pending" ||
+                              order?.payment?.status === "in_process"
+                            ? "Pagamento em processamento"
+                            : payment === "credit"
+                              ? order
+                                ? "Preencha o cartão abaixo"
+                                : "Continuar para cartão"
+                              : "Gerar Pix"
+                        : "Ver pedido"}
                   </button>
-                )}
+                  {step > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setStep((prev) => prev - 1)}
+                      className="w-full py-3 rounded-xl font-medium text-sm text-cinza-amarronzado hover:text-rosa-lais transition-colors"
+                    >
+                      Voltar
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          </aside>
+            </aside>
           )}
         </form>
       </div>
