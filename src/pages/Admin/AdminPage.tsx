@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
+import { X } from "lucide-react";
 import {
   createProduct,
   createHeroBanner,
@@ -47,6 +48,7 @@ interface SavedImage {
   id: number | string;
   url: string;
   name: string;
+  uploadId?: number | string;
 }
 
 interface BannerFormState {
@@ -103,6 +105,7 @@ export function AdminPage() {
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [images, setImages] = useState<File[]>([]);
   const [savedImages, setSavedImages] = useState<SavedImage[]>([]);
+  const [removeUploadIds, setRemoveUploadIds] = useState<Array<number | string>>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [expandedImage, setExpandedImage] = useState<SavedImage | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -429,6 +432,7 @@ export function AdminPage() {
     setForm(emptyForm);
     setImages([]);
     setSavedImages([]);
+    setRemoveUploadIds([]);
     setExpandedImage(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     setSubmitError("");
@@ -487,6 +491,9 @@ export function AdminPage() {
       payload.append("active", form.active ? "1" : "0");
       payload.append("order", form.order ? "1" : "0");
 
+      if (form.id && removeUploadIds.length > 0) {
+        payload.append("removeUploadIds", JSON.stringify(removeUploadIds));
+      }
       images.forEach((image) => payload.append("images", image));
 
       if (form.id) {
@@ -525,6 +532,7 @@ export function AdminPage() {
       order: Boolean(Number(product.order ?? 0)),
     });
     setImages([]);
+    setRemoveUploadIds([]);
     const uploadedImages = (product.uploads ?? [])
       .slice()
       .sort(
@@ -533,6 +541,7 @@ export function AdminPage() {
       )
       .map((upload: { id: number | string; url: string }, index: number) => ({
         id: upload.id,
+        uploadId: upload.id,
         url: upload.url,
         name: `Imagem ${index + 1}`,
       }));
@@ -546,6 +555,18 @@ export function AdminPage() {
     setExpandedImage(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     setSubmitError("");
+  };
+
+  const handleRemoveSavedImage = (image: SavedImage) => {
+    const { uploadId } = image;
+    if (uploadId == null) return;
+
+    setSavedImages((current) =>
+      current.filter((savedImage) => savedImage.id !== image.id),
+    );
+    setRemoveUploadIds((current) =>
+      current.includes(uploadId) ? current : [...current, uploadId],
+    );
   };
 
   const handleDelete = async (id: number | string) => {
@@ -848,20 +869,35 @@ export function AdminPage() {
                 />
                 <div className="flex flex-wrap gap-2 rounded-xl border border-dashed border-cinza-quente bg-cream p-3">
                   {savedImages.map((image) => (
-                    <button
+                    <div
                       key={image.id}
-                      type="button"
-                      onClick={() => setExpandedImage(image)}
                       className="group relative h-24 w-24 overflow-hidden rounded-lg border-2 border-dourado-suave bg-branco shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
-                      aria-label={`Ampliar ${image.name}`}
                     >
-                      <img
-                        src={getImageUrl(image.url)}
-                        alt=""
-                        crossOrigin="anonymous"
-                        className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
-                      />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedImage(image)}
+                        className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rosa-lais"
+                        aria-label={`Ampliar ${image.name}`}
+                      >
+                        <img
+                          src={getImageUrl(image.url)}
+                          alt=""
+                          crossOrigin="anonymous"
+                          className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                        />
+                      </button>
+                      {image.uploadId != null && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSavedImage(image)}
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-roxo-profundo/85 text-branco shadow-sm transition hover:bg-rosa-lais focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-1"
+                          aria-label={`Remover ${image.name}`}
+                          title={`Remover ${image.name}`}
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
                   ))}
                   {images.map((image, index) => (
                     <div

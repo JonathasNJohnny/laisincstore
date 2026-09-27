@@ -405,8 +405,8 @@ export function ProductPage() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center gap-2 p-3 bg-branco rounded-xl border border-cinza-quente">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2 p-6 bg-branco rounded-xl border border-cinza-quente">
                   <Truck
                     className="w-5 h-5 text-rosa-lais"
                     aria-hidden="true"
@@ -424,7 +424,7 @@ export function ProductPage() {
                     Pagamento seguro
                   </span>
                 </div>
-                <div className="flex items-center gap-2 p-3 bg-branco rounded-xl border border-cinza-quete">
+                {/* <div className="flex items-center gap-2 p-3 bg-branco rounded-xl border border-cinza-quete">
                   <RotateCcw
                     className="w-5 h-5 text-rosa-lais"
                     aria-hidden="true"
@@ -432,7 +432,7 @@ export function ProductPage() {
                   <span className="text-grafite-arroxeado">
                     Troca fácil em 7 dias
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

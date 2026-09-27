@@ -509,6 +509,12 @@ export function CheckoutPage() {
     } finally { setIsValidatingCoupon(false); }
   };
 
+  const handleRemoveCoupon = () => {
+    setCouponPreview(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
   useEffect(() => { setCouponPreview(null); setCouponError(""); }, [items]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -1520,8 +1526,8 @@ export function CheckoutPage() {
                     <div className="pb-4">
                       <label htmlFor="coupon-code" className="mb-1 block font-medium text-grafite-arroxeado">Cupom de desconto</label>
                       <div className="flex gap-2">
-                        <input id="coupon-code" value={couponCode} onChange={(event) => { setCouponCode(event.target.value); setCouponPreview(null); setCouponError(""); }} placeholder="Digite seu código" className="min-w-0 flex-1 rounded-xl border border-cinza-quente bg-cream px-3 py-2 uppercase" />
-                        <button type="button" onClick={() => void handleValidateCoupon()} disabled={isValidatingCoupon || !couponCode.trim()} className="rounded-xl border border-cinza-quente px-3 py-2 font-semibold text-grafite-arroxeado disabled:opacity-60">{isValidatingCoupon ? "..." : "Aplicar"}</button>
+                        <input id="coupon-code" value={couponCode} onChange={(event) => { setCouponCode(event.target.value); setCouponPreview(null); setCouponError(""); }} disabled={Boolean(couponPreview)} placeholder="Digite seu código" className="min-w-0 flex-1 rounded-xl border border-cinza-quente bg-cream px-3 py-2 uppercase disabled:cursor-not-allowed disabled:opacity-60" />
+                        <button type="button" onClick={couponPreview ? handleRemoveCoupon : () => void handleValidateCoupon()} disabled={!couponPreview && (isValidatingCoupon || !couponCode.trim())} className="rounded-xl border border-cinza-quente px-3 py-2 font-semibold text-grafite-arroxeado disabled:opacity-60">{couponPreview ? "Remover" : isValidatingCoupon ? "..." : "Aplicar"}</button>
                       </div>
                       {couponError && <p className="mt-2 text-xs text-rose-700">{couponError}</p>}
                       {couponPreview && <p className="mt-2 text-xs font-medium text-emerald-700">Cupom {couponPreview.code} aplicado.</p>}

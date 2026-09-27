@@ -235,8 +235,7 @@ export function HomePage() {
                 Qualidade Garantida
               </h3>
               <p className="text-cinza-amarronzado">
-                Materiais selecionados e acabamento impecável para durar por
-                muito tempo.
+                Qualidade em cada detalhe, feito para durar quando bem cuidado.
               </p>
             </div>
             <div className="p-6 lg:p-8 bg-branco rounded-2xl border border-cinza-quente">
