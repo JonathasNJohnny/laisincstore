@@ -190,22 +190,23 @@ export function ProductsTab() {
       window.alert("Não foi possível remover o produto.");
     }
   };
-  const toggleOrder = async (product: any) => {
-    try {
-      const payload = new FormData();
-      payload.append("order", product.order ? "0" : "1");
-      await updateProduct(product.id, payload);
-      setProducts((current) =>
-        current.map((item) =>
-          String(item.id) === String(product.id)
-            ? { ...item, order: Number(product.order) ? 0 : 1 }
-            : item,
-        ),
-      );
-    } catch {
-      window.alert("Não foi possível atualizar o status de encomenda.");
-    }
-  };
+  // const toggleOrder = async (product: any) => {
+  //   try {
+  //     const payload = new FormData();
+  //     payload.append("order", product.order ? "0" : "1");
+  //     await updateProduct(product.id, payload);
+  //     setProducts((current) =>
+  //       current.map((item) =>
+  //         String(item.id) === String(product.id)
+  //           ? { ...item, order: Number(product.order) ? 0 : 1 }
+  //           : item,
+  //       ),
+  //     );
+  //   } catch {
+  //     window.alert("Não foi possível atualizar o status de encomenda.");
+  //   }
+  // };
+
   return (
     <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="rounded-3xl border border-cinza-quente bg-branco p-6 shadow-sm">
@@ -221,15 +222,15 @@ export function ProductsTab() {
           />
           {!form.variant && (
             <label className="block text-sm font-medium text-grafite-arroxeado">
-            Descrição
-            <textarea
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              required
-              className="mt-1 min-h-28 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-            />
+              Descrição
+              <textarea
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                required
+                className="mt-1 min-h-28 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+              />
             </label>
           )}
           {!form.variant && (
@@ -238,9 +239,7 @@ export function ProductsTab() {
               <input
                 list="admin-categories"
                 value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
                 required
                 className="mt-1 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
               />
@@ -537,7 +536,8 @@ function ProductVariantAutocomplete({
               >
                 <span className="block font-medium">{product.name}</span>
                 <span className="block text-xs text-cinza-amarronzado">
-                  #{product.id}{product.slug ? ` — ${product.slug}` : ""}
+                  #{product.id}
+                  {product.slug ? ` — ${product.slug}` : ""}
                 </span>
               </button>
             ))}
