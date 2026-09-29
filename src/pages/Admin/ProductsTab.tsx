@@ -29,7 +29,7 @@ type ProductForm = {
 type SavedImage = {
   id: number | string;
   uploadId?: number | string;
-  url: string;
+  url?: string | null;
   name: string;
 };
 const emptyForm: ProductForm = {
@@ -688,10 +688,16 @@ function ImageThumb({
   image: SavedImage;
   onRemove: () => void;
 }) {
+  const imageUrl = image.url ?? "";
+
   return (
     <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-cinza-quente bg-branco">
       <img
-        src={image.url.startsWith("blob:") ? image.url : getImageUrl(image.url)}
+        src={
+          imageUrl.startsWith("blob:")
+            ? imageUrl
+            : getImageUrl(imageUrl)
+        }
         alt={image.name}
         className="h-full w-full object-cover"
       />
