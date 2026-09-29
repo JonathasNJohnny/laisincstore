@@ -1,9 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
 
-export type AdminTab = "products" | "banners" | "coupons" | "payment" | "orders";
+export type AdminTab = "products" | "boxes" | "banners" | "coupons" | "payment" | "orders";
 
 const tabs: Array<{ id: AdminTab; label: string }> = [
   { id: "products", label: "Produtos" },
+  { id: "boxes", label: "Caixas" },
   { id: "banners", label: "Banner" },
   { id: "coupons", label: "Cupons" },
   { id: "payment", label: "Integrações" },

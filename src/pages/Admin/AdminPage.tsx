@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { CouponsPanel } from "./CouponsPanel";
 import { AdminTabs, type AdminTab } from "./AdminTabs";
 import { BannersTab } from "./BannersTab";
+import { BoxesTab } from "./BoxesTab";
 import { IntegrationsTab } from "./IntegrationsTab";
 import { OrdersTab } from "./OrdersTab";
 import { ProductsTab } from "./ProductsTab";
@@ -31,6 +32,7 @@ export function AdminPage() {
       </div>
       <AdminTabs activeTab={activeTab} onChange={setActiveTab} />
       {activeTab === "products" && <ProductsTab />}
+      {activeTab === "boxes" && <BoxesTab />}
       {activeTab === "banners" && <BannersTab />}
       {activeTab === "coupons" && <CouponsPanel />}
       {activeTab === "payment" && (

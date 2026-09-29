@@ -19,6 +19,9 @@ type ProductForm = {
   price: string;
   stock: string;
   weightGrams: string;
+  height: string;
+  width: string;
+  length: string;
   variant: string;
   active: boolean;
   order: boolean;
@@ -37,6 +40,9 @@ const emptyForm: ProductForm = {
   price: "",
   stock: "",
   weightGrams: "",
+  height: "",
+  width: "",
+  length: "",
   variant: "",
   active: true,
   order: false,
@@ -123,6 +129,9 @@ export function ProductsTab() {
       payload.append("price", form.price);
       payload.append("stock", form.stock);
       payload.append("weightGrams", String(weight));
+      payload.append("height", form.height);
+      payload.append("width", form.width);
+      payload.append("length", form.length);
       payload.append("variant", form.variant);
       payload.append("active", form.active ? "1" : "0");
       payload.append("order", form.order ? "1" : "0");
@@ -155,6 +164,9 @@ export function ProductsTab() {
       stock: String(product.stock ?? 0),
       weightGrams:
         product.weight_grams == null ? "" : String(product.weight_grams),
+      height: product.height == null ? "" : String(product.height),
+      width: product.width == null ? "" : String(product.width),
+      length: product.length == null ? "" : String(product.length),
       variant: String(product.variant ?? product.variant_id ?? ""),
       active: Boolean(Number(product.active ?? 1)),
       order: Boolean(Number(product.order ?? 0)),
@@ -275,6 +287,29 @@ export function ProductsTab() {
               type="number"
               value={form.weightGrams}
               onChange={(weightGrams) => setForm({ ...form, weightGrams })}
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field
+              label="Altura (cm)"
+              type="number"
+              value={form.height}
+              onChange={(height) => setForm({ ...form, height })}
+              required
+            />
+            <Field
+              label="Largura (cm)"
+              type="number"
+              value={form.width}
+              onChange={(width) => setForm({ ...form, width })}
+              required
+            />
+            <Field
+              label="Comprimento (cm)"
+              type="number"
+              value={form.length}
+              onChange={(length) => setForm({ ...form, length })}
               required
             />
           </div>

@@ -460,6 +460,9 @@ export interface ApiProduct {
   price: string | number;
   stock?: number;
   weight_grams?: number | null;
+  height?: number | null;
+  width?: number | null;
+  length?: number | null;
   variant?: number | string | null;
   variant_id?: number | string | null;
   image_url?: string | null;
@@ -472,6 +475,55 @@ export interface ApiProduct {
   active?: number | boolean | string;
   order?: number;
   variants?: ApiProduct[];
+}
+
+export interface ApiBox {
+  id: number | string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  active?: number | boolean | string;
+}
+
+interface BoxesResponse {
+  boxes?: ApiBox[];
+}
+
+export async function getBoxes(): Promise<ApiBox[]> {
+  const response = await fetch(`${API_URL}/api/boxes`);
+  if (!response.ok) throw new Error("Não foi possível carregar as caixas.");
+  const data = (await response.json()) as ApiBox[] | BoxesResponse;
+  return Array.isArray(data) ? data : data.boxes ?? [];
+}
+
+export async function createBox(payload: Omit<ApiBox, "id">) {
+  const response = await fetch(`${API_URL}/api/boxes`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Não foi possível criar a caixa.");
+  return response.json();
+}
+
+export async function updateBox(id: number | string, payload: Omit<ApiBox, "id">) {
+  const response = await fetch(`${API_URL}/api/boxes/${id}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("Não foi possível atualizar a caixa.");
+  return response.json();
+}
+
+export async function deleteBox(id: number | string) {
+  const response = await fetch(`${API_URL}/api/boxes/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error("Não foi possível excluir a caixa.");
+  return response.json();
 }
 
 interface ProductsResponse {
