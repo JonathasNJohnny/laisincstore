@@ -32,7 +32,9 @@ export function ShopPage() {
 
     loadProducts()
       .then((result) => {
-        if (active) setProducts(result);
+        if (active) {
+          setProducts(result.filter((product) => product.variant === null));
+        }
       })
       .catch((error) => {
         console.error("Erro ao carregar produtos da loja:", error);

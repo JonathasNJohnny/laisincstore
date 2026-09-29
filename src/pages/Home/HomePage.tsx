@@ -24,7 +24,7 @@ export function HomePage() {
       try {
         const data = await loadProducts();
         if (!active) return;
-        setLiveProducts(data);
+        setLiveProducts(data.filter((product) => product.variant === null));
       } catch {
         if (!active) return;
         setLiveProducts([]);
@@ -60,9 +60,11 @@ export function HomePage() {
     const categoryMap = new Map<string, Product[]>();
 
     liveProducts.forEach((product) => {
-      const categoryProducts = categoryMap.get(product.category) ?? [];
-      categoryProducts.push(product);
-      categoryMap.set(product.category, categoryProducts);
+      if (product.variant === null) {
+        const categoryProducts = categoryMap.get(product.category) ?? [];
+        categoryProducts.push(product);
+        categoryMap.set(product.category, categoryProducts);
+      }
     });
 
     return Array.from(categoryMap.entries()).map(([name, categoryProducts]) => {

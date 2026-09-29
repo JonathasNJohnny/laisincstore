@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ProductGrid } from "../ProductGrid/ProductGrid";
 import { getProducts, getImageUrl } from "../../services/api";
+import type { ApiProduct } from "../../services/api";
 import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
 import { useCart } from "../../contexts/CartContext";
@@ -11,19 +12,7 @@ export function invalidateProductsCache() {
   productsRequest = null;
 }
 
-export function normalizeApiProduct(apiProduct: {
-  id: number;
-  name: string;
-  category?: string;
-  slug?: string;
-  description?: string;
-  price: string | number;
-  stock?: number;
-  image_url?: string | null;
-  uploads?: Array<{ url: string; position?: number }>;
-  active?: number | boolean | string;
-  order?: number;
-}): Product {
+export function normalizeApiProduct(apiProduct: ApiProduct): Product {
   const numericPrice = Number(apiProduct.price ?? 0);
   const safePrice = Number.isFinite(numericPrice) ? numericPrice : 0;
   const images = (apiProduct.uploads ?? [])
@@ -36,6 +25,7 @@ export function normalizeApiProduct(apiProduct: {
     id: String(apiProduct.id),
     slug: apiProduct.slug || slugify(apiProduct.name),
     name: apiProduct.name,
+    variant: apiProduct.variant,
     category: apiProduct.category || "Sem categoria",
     description: apiProduct.description || "Produto da Laís Inc.",
     price: Math.round(safePrice * 100),
@@ -45,6 +35,7 @@ export function normalizeApiProduct(apiProduct: {
       apiProduct.active === 1 || apiProduct.order === 0 ? "Novo" : undefined,
     stock: Number(apiProduct.stock ?? 0),
     featured: true,
+    variants: apiProduct.variants?.map(normalizeApiProduct),
   };
 }
 

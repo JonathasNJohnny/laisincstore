@@ -460,6 +460,8 @@ export interface ApiProduct {
   price: string | number;
   stock?: number;
   weight_grams?: number | null;
+  variant?: number | string | null;
+  variant_id?: number | string | null;
   image_url?: string | null;
   uploads?: Array<{
     id: number | string;
@@ -469,6 +471,7 @@ export interface ApiProduct {
   }>;
   active?: number | boolean | string;
   order?: number;
+  variants?: ApiProduct[];
 }
 
 interface ProductsResponse {
@@ -539,9 +542,10 @@ export async function deleteHeroBanner(id: number | string) {
   return response.json();
 }
 
-interface ProductResponse {
+export interface ProductResponse {
   status?: string;
   product: ApiProduct;
+  variants?: ApiProduct[];
 }
 
 function isActiveProduct(product: ApiProduct): boolean {

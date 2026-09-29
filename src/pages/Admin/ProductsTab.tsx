@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import {
   createProduct,
@@ -6,6 +6,7 @@ import {
   getImageUrl,
   getProducts,
   updateProduct,
+  type ApiProduct,
 } from "../../services/api";
 import { invalidateProductsCache } from "../../components/ProductList/ProductList";
 
@@ -18,6 +19,7 @@ type ProductForm = {
   price: string;
   stock: string;
   weightGrams: string;
+  variant: string;
   active: boolean;
   order: boolean;
 };
@@ -35,6 +37,7 @@ const emptyForm: ProductForm = {
   price: "",
   stock: "",
   weightGrams: "",
+  variant: "",
   active: true,
   order: false,
 };
@@ -116,10 +119,11 @@ export function ProductsTab() {
       payload.append("name", form.name);
       payload.append("category", form.category);
       payload.append("slug", form.slug || form.name);
-      payload.append("description", form.description);
+      payload.append("description", form.variant ? "" : form.description);
       payload.append("price", form.price);
       payload.append("stock", form.stock);
       payload.append("weightGrams", String(weight));
+      payload.append("variant", form.variant);
       payload.append("active", form.active ? "1" : "0");
       payload.append("order", form.order ? "1" : "0");
       if (form.id && removedIds.length)
@@ -151,6 +155,7 @@ export function ProductsTab() {
       stock: String(product.stock ?? 0),
       weightGrams:
         product.weight_grams == null ? "" : String(product.weight_grams),
+      variant: String(product.variant ?? product.variant_id ?? ""),
       active: Boolean(Number(product.active ?? 1)),
       order: Boolean(Number(product.order ?? 0)),
     });
@@ -214,27 +219,8 @@ export function ProductsTab() {
             onChange={(name) => setForm({ ...form, name })}
             required
           />
-          <label className="block text-sm font-medium text-grafite-arroxeado">
-            Categoria
-            <input
-              list="admin-categories"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              required
-              className="mt-1 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-            />
-            <datalist id="admin-categories">
-              {categories.map((category) => (
-                <option key={category} value={category} />
-              ))}
-            </datalist>
-          </label>
-          <Field
-            label="Slug"
-            value={form.slug}
-            onChange={(slug) => setForm({ ...form, slug })}
-          />
-          <label className="block text-sm font-medium text-grafite-arroxeado">
+          {!form.variant && (
+            <label className="block text-sm font-medium text-grafite-arroxeado">
             Descrição
             <textarea
               value={form.description}
@@ -244,7 +230,32 @@ export function ProductsTab() {
               required
               className="mt-1 min-h-28 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
             />
-          </label>
+            </label>
+          )}
+          {!form.variant && (
+            <label className="block text-sm font-medium text-grafite-arroxeado">
+              Categoria
+              <input
+                list="admin-categories"
+                value={form.category}
+                onChange={(e) =>
+                  setForm({ ...form, category: e.target.value })
+                }
+                required
+                className="mt-1 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+              />
+              <datalist id="admin-categories">
+                {categories.map((category) => (
+                  <option key={category} value={category} />
+                ))}
+              </datalist>
+            </label>
+          )}
+          <Field
+            label="Slug"
+            value={form.slug}
+            onChange={(slug) => setForm({ ...form, slug })}
+          />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field
               label="Preço"
@@ -268,6 +279,12 @@ export function ProductsTab() {
               required
             />
           </div>
+          <ProductVariantAutocomplete
+            products={products}
+            productId={form.id}
+            value={form.variant}
+            onChange={(variant) => setForm({ ...form, variant })}
+          />
           <div className="flex gap-4">
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -441,6 +458,104 @@ export function ProductsTab() {
     </div>
   );
 }
+
+function ProductVariantAutocomplete({
+  products,
+  productId,
+  value,
+  onChange,
+}: {
+  products: ApiProduct[];
+  productId?: number;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = products.find((product) => String(product.id) === value);
+  const options = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase("pt-BR");
+    return products
+      .filter((product) => product.id !== productId)
+      .filter(
+        (product) =>
+          !term ||
+          product.name.toLocaleLowerCase("pt-BR").includes(term) ||
+          product.slug?.toLocaleLowerCase("pt-BR").includes(term),
+      )
+      .slice(0, 8);
+  }, [productId, products, query]);
+
+  return (
+    <label className="block text-sm font-medium text-grafite-arroxeado">
+      Variante
+      <div className="relative mt-1">
+        {selected ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-cinza-quente bg-cream px-4 py-3">
+            <span className="min-w-0 truncate">
+              #{selected.id} — {selected.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setQuery("");
+              }}
+              className="shrink-0 text-rosa-lais"
+              aria-label="Remover variante selecionada"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <input
+            value={query}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+            }}
+            placeholder="Busque pelo nome ou slug"
+            autoComplete="off"
+            className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+          />
+        )}
+        {!selected && open && (
+          <div className="absolute z-10 left-0 right-0 top-full mt-1 max-h-56 overflow-auto rounded-xl border border-cinza-quente bg-branco p-1 shadow-lg">
+            {options.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(String(product.id));
+                  setQuery("");
+                  setOpen(false);
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left hover:bg-cream"
+              >
+                <span className="block font-medium">{product.name}</span>
+                <span className="block text-xs text-cinza-amarronzado">
+                  #{product.id}{product.slug ? ` — ${product.slug}` : ""}
+                </span>
+              </button>
+            ))}
+            {!options.length && (
+              <p className="p-2 text-cinza-amarronzado">
+                Nenhum produto encontrado.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+      <span className="mt-1 block text-xs font-normal text-cinza-amarronzado">
+        Selecione o produto principal desta variante.
+      </span>
+    </label>
+  );
+}
+
 function Field({
   label,
   value,

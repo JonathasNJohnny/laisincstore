@@ -4,6 +4,7 @@ export interface Product {
   id: string;
   slug: string;
   name: string;
+  variant?: number | string | null;
   category: string;
   description: string;
   price: number;
@@ -13,6 +14,7 @@ export interface Product {
   badge?: BadgeType;
   stock: number;
   featured?: boolean;
+  variants?: Product[];
 }
 
 export interface Category {

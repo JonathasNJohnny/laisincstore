@@ -8,7 +8,6 @@ import {
   Share2,
   Truck,
   Shield,
-  RotateCcw,
   Star,
 } from "lucide-react";
 import { Badge } from "../../components/Badge/Badge";
@@ -28,7 +27,10 @@ export function ProductPage() {
   const { addItem, isInCart, getItemQuantity } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [originalDescription, setOriginalDescription] = useState("");
+  const [variantOptions, setVariantOptions] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVariantLoading, setIsVariantLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -50,7 +52,28 @@ export function ProductPage() {
 
       try {
         const response = await getProductBySlug(slug);
-        if (active) setProduct(normalizeApiProduct(response.product));
+        if (active) {
+          const normalizedProduct = normalizeApiProduct(response.product);
+          const responseVariants =
+            response.variants?.map(normalizeApiProduct) ?? [];
+          const variants = normalizedProduct.variants?.length
+            ? normalizedProduct.variants
+            : responseVariants;
+
+          setOriginalDescription(normalizedProduct.description);
+          setProduct({
+            ...normalizedProduct,
+            variants,
+          });
+          setVariantOptions([
+            normalizedProduct,
+            ...variants.filter(
+              (variant) => variant.id !== normalizedProduct.id,
+            ),
+          ]);
+          setQuantity(1);
+          setIsZoomed(false);
+        }
       } catch {
         if (active) setProduct(null);
       } finally {
@@ -115,6 +138,29 @@ export function ProductPage() {
     );
   };
 
+  const handleVariantChange = async (variant: Product) => {
+    if (variant.id === product.id || isVariantLoading) return;
+
+    setIsVariantLoading(true);
+    try {
+      const response = await getProductBySlug(variant.slug);
+      const normalizedVariant = normalizeApiProduct(response.product);
+
+      setProduct({
+        ...normalizedVariant,
+        description: originalDescription,
+        variants: variantOptions.filter(
+          (option) => option.id !== normalizedVariant.id,
+        ),
+      });
+      setQuantity(1);
+      setSelectedImage(0);
+      setIsZoomed(false);
+    } finally {
+      setIsVariantLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <nav className="container py-4" aria-label="Breadcrumb">
@@ -159,7 +205,7 @@ export function ProductPage() {
       <section className="container py-8 lg:py-12">
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-cinza-quente/50">
+            <div className="relative aspect-square w-[90%] rounded-2xl overflow-hidden bg-cinza-quente/50">
               <button
                 type="button"
                 onClick={() => setIsZoomed(true)}
@@ -241,6 +287,36 @@ export function ProductPage() {
                 </button>
               ))}
             </div>
+
+            {variantOptions.length > 1 && (
+              <div aria-label="Variantes do produto">
+                <p className="text-sm font-medium text-grafite-arroxeado mb-3">
+                  Escolha uma opção
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {variantOptions.map((variant) => {
+                    const isSelected = variant.id === product.id;
+
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        onClick={() => void handleVariantChange(variant)}
+                        disabled={isVariantLoading}
+                        aria-current={isSelected ? "page" : undefined}
+                        className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                          isSelected
+                            ? "border-rosa-lais bg-rosa-lais text-branco"
+                            : "border-cinza-quente bg-branco text-grafite-arroxeado hover:border-rosa-lais hover:text-rosa-lais"
+                        }`}
+                      >
+                        {variant.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-4">
               <Button
