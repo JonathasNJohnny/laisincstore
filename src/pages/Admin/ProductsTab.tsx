@@ -246,21 +246,12 @@ export function ProductsTab() {
             </label>
           )}
           {!form.variant && (
-            <label className="block text-sm font-medium text-grafite-arroxeado">
-              Categoria
-              <input
-                list="admin-categories"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                required
-                className="mt-1 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
-              />
-              <datalist id="admin-categories">
-                {categories.map((category) => (
-                  <option key={category} value={category} />
-                ))}
-              </datalist>
-            </label>
+            <CategoryAutocomplete
+              categories={categories}
+              value={form.category}
+              onChange={(category) => setForm({ ...form, category })}
+              required
+            />
           )}
           <Field
             label="Slug"
@@ -490,6 +481,77 @@ export function ProductsTab() {
         )}
       </section>
     </div>
+  );
+}
+
+function CategoryAutocomplete({
+  categories,
+  value,
+  onChange,
+  required = false,
+}: {
+  categories: string[];
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  const options = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase("pt-BR");
+    return categories
+      .filter((category) => category.toLocaleLowerCase("pt-BR").includes(term))
+      .slice(0, 8);
+  }, [categories, query]);
+
+  return (
+    <label className="block text-sm font-medium text-grafite-arroxeado">
+      Categoria
+      <div className="relative mt-1">
+        <input
+          value={query}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setQuery(nextValue);
+            onChange(nextValue);
+            setOpen(true);
+          }}
+          required={required}
+          placeholder="Busque ou digite uma categoria"
+          autoComplete="off"
+          className="w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+        />
+        {open && options.length > 0 && (
+          <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-auto rounded-xl border border-cinza-quente bg-branco p-1 shadow-lg">
+            {options.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(category);
+                  setQuery(category);
+                  setOpen(false);
+                }}
+                className="block w-full rounded-lg px-3 py-2 text-left hover:bg-cream"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <span className="mt-1 block text-xs font-normal text-cinza-amarronzado">
+        Selecione uma sugestão ou digite uma nova categoria.
+      </span>
+    </label>
   );
 }
 
