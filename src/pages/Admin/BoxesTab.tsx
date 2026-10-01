@@ -13,6 +13,7 @@ type BoxForm = {
   height: string;
   width: string;
   length: string;
+  weightGrams: string;
   active: boolean;
 };
 
@@ -21,6 +22,7 @@ const emptyForm: BoxForm = {
   height: "",
   width: "",
   length: "",
+  weightGrams: "",
   active: true,
 };
 
@@ -66,6 +68,15 @@ export function BoxesTab() {
       setError("Informe dimensões maiores que zero.");
       return;
     }
+    const weightGrams = Number(form.weightGrams);
+    if (
+      !form.weightGrams.trim() ||
+      !Number.isInteger(weightGrams) ||
+      weightGrams < 0
+    ) {
+      setError("Informe um peso inteiro maior ou igual a zero em gramas.");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -75,6 +86,7 @@ export function BoxesTab() {
         height: dimensions[0],
         width: dimensions[1],
         length: dimensions[2],
+        weight_grams: weightGrams,
         active: form.active,
       };
       if (form.id) await updateBox(form.id, payload);
@@ -99,6 +111,7 @@ export function BoxesTab() {
       height: String(box.height),
       width: String(box.width),
       length: String(box.length),
+      weightGrams: String(box.weight_grams),
       active: isActive(box),
     });
     setError("");
@@ -160,6 +173,20 @@ export function BoxesTab() {
               </label>
             ))}
           </div>
+          <label className="block text-sm font-medium text-grafite-arroxeado">
+            Peso (gramas)
+            <input
+              required
+              type="number"
+              min="0"
+              step="1"
+              value={form.weightGrams}
+              onChange={(event) =>
+                setForm({ ...form, weightGrams: event.target.value })
+              }
+              className="mt-1 w-full rounded-xl border border-cinza-quente bg-cream px-4 py-3"
+            />
+          </label>
           <label className="flex items-center gap-2 text-sm text-grafite-arroxeado">
             <input
               type="checkbox"
@@ -217,6 +244,9 @@ export function BoxesTab() {
                     </h3>
                     <p className="text-sm text-cinza-amarronzado">
                       {box.height} × {box.width} × {box.length} cm
+                    </p>
+                    <p className="text-sm text-cinza-amarronzado">
+                      Peso: {box.weight_grams} g
                     </p>
                     <p
                       className={`mt-2 text-xs font-semibold ${isActive(box) ? "text-emerald-700" : "text-cinza-amarronzado"}`}

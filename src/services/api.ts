@@ -392,6 +392,7 @@ export function getOrders() {
 
 export interface AdminOrder extends Order {
   customer: { id: number | string; name: string; email: string };
+  dadosParaEtiqueta?: OrderLabelData | null;
   items: Array<{
     productId: number | string;
     productName?: string;
@@ -399,6 +400,52 @@ export interface AdminOrder extends Order {
     unitPrice: string | number;
     subtotal: string | number;
   }>;
+}
+
+export interface OrderLabelData {
+  orderId: number | string;
+  remetente?: {
+    postalCode?: string | null;
+    nome?: string | null;
+    documento?: string | null;
+    enderecoCompleto?: string | null;
+  } | null;
+  destinatario?: {
+    recipient?: string | null;
+    phone?: string | null;
+    cpf?: string | null;
+    postalCode?: string | null;
+    street?: string | null;
+    number?: string | null;
+    complement?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    email?: string | null;
+  } | null;
+  frete?: {
+    serviceId?: number | string | null;
+    name?: string | null;
+    company?: string | null;
+    price?: number | string | null;
+    deliveryTime?: number | null;
+  } | null;
+  embalagem?: {
+    name?: string | null;
+    heightCm?: number | null;
+    widthCm?: number | null;
+    lengthCm?: number | null;
+    weightKg?: number | null;
+  } | null;
+  produtos?: Array<{
+    productId: number | string;
+    name?: string | null;
+    quantity?: number | null;
+    unitPrice?: number | string | null;
+    weightGrams?: number | null;
+  }>;
+  valorProdutos?: number | string | null;
+  camposPendentes?: string[];
 }
 
 export function getAdminOrders() {
@@ -483,6 +530,7 @@ export interface ApiBox {
   height: number;
   width: number;
   length: number;
+  weight_grams: number;
   active?: number | boolean | string;
 }
 
