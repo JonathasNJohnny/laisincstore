@@ -182,7 +182,6 @@ function ShippingLabel({ label }: { label: NonNullable<AdminOrder["dadosParaEtiq
           <p className="text-xs font-bold uppercase text-cinza-amarronzado">Remetente</p>
           <p className="mt-1 font-semibold">{display(sender?.nome)}</p>
           <p>CEP: {display(sender?.postalCode)}</p>
-          <p>{display(sender?.enderecoCompleto)}</p>
           <p>Documento: {display(sender?.documento)}</p>
         </div>
         <div>

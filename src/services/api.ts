@@ -408,7 +408,6 @@ export interface OrderLabelData {
     postalCode?: string | null;
     nome?: string | null;
     documento?: string | null;
-    enderecoCompleto?: string | null;
   } | null;
   destinatario?: {
     recipient?: string | null;
