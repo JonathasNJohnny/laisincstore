@@ -143,6 +143,7 @@ export function CheckoutPage() {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixDataTimedOut, setPixDataTimedOut] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
@@ -186,6 +187,19 @@ export function CheckoutPage() {
     order?.validOrder === false || order?.isExpired === true;
   const orderExpiry = formatOrderExpiry(order?.expiresAt);
   const userId = user?.id;
+
+  useEffect(() => {
+    const hasPixData = Boolean(pixCode || pixPayment?.qrCodeBase64);
+    if (step !== 4 || !isPixPayment || order?.status === "paid" || hasPixData) {
+      setPixDataTimedOut(false);
+      return;
+    }
+
+    setPixDataTimedOut(false);
+    const timeout = window.setTimeout(() => setPixDataTimedOut(true), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [isPixPayment, order?.status, pixCode, pixPayment?.qrCodeBase64, step]);
+
   useEffect(() => {
     if (!user || isContinuingPayment) return;
 
@@ -1425,10 +1439,15 @@ export function CheckoutPage() {
                   !pixPayment?.qrCodeBase64 && (
                     <p
                       role="alert"
-                      className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                      className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
+                        pixDataTimedOut
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-cinza-quente bg-cream text-cinza-amarronzado"
+                      }`}
                     >
-                      Não foi possível carregar os dados do Pix. Tente gerar o
-                      pagamento novamente.
+                      {pixDataTimedOut
+                        ? "Não foi possível carregar os dados do Pix. Tente gerar o pagamento novamente."
+                        : "Gerando o QR Code Pix... aguarde alguns segundos."}
                     </p>
                   )}
                 {isPixPayment &&
