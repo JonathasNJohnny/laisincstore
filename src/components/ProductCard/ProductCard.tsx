@@ -38,13 +38,13 @@ export function ProductCard({
 
   if (variant === "compact") {
     return (
-      <div className="group flex min-w-0 items-start gap-4 p-4 bg-branco rounded-xl border border-cinza-quente hover:shadow-md transition-shadow">
+      <div className="group flex h-full min-w-0 flex-col gap-2.5 rounded-xl border border-cinza-quente bg-branco p-2.5 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-start sm:gap-4 sm:p-4">
         <Link
           to={`/produto/${product.slug}`}
-          className="flex min-w-0 flex-1 gap-4"
+          className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:gap-4"
           aria-label={`Ver ${product.name}`}
         >
-          <div className="relative w-[116px] h-[116px] flex-shrink-0 rounded-lg overflow-hidden bg-cinza-quente/50">
+          <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-lg bg-cinza-quente/50 sm:h-[116px] sm:w-[116px]">
             <img
               src={product.image}
               alt=""
@@ -58,19 +58,19 @@ export function ProductCard({
           </div>
           <div className="flex min-w-0 flex-1 flex-col justify-between">
             <div>
-              <h3 className="font-medium text-grafite-arroxeado break-words group-hover:text-rosa-lais transition-colors">
+              <h3 className="line-clamp-2 break-words text-sm font-semibold leading-tight text-grafite-arroxeado transition-colors group-hover:text-rosa-lais sm:text-base">
                 {product.name}
               </h3>
-              <p className="text-xs text-cinza-amarronzado truncate">
+              <p className="mt-1 truncate text-[11px] text-cinza-amarronzado sm:text-xs">
                 {product.category}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="font-semibold text-rosa-lais">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-sm font-bold text-rosa-lais sm:text-base">
                 {formatCurrency(product.price)}
               </span>
               {hasDiscount && (
-                <span className="text-xs text-cinza-amarronzado line-through">
+                <span className="text-[11px] text-cinza-amarronzado line-through sm:text-xs">
                   {formatCurrency(product.oldPrice!)}
                 </span>
               )}
@@ -81,11 +81,12 @@ export function ProductCard({
           <button
             type="button"
             onClick={() => onAddToCart(product, 1)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-dourado-suave text-roxo-profundo hover:bg-dourado-suave/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dourado-suave focus-visible:ring-offset-2"
+            className="flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-dourado-suave text-sm font-semibold text-roxo-profundo hover:bg-dourado-suave/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dourado-suave focus-visible:ring-offset-2 sm:h-11 sm:w-11 sm:rounded-xl sm:px-0"
             aria-label={`Adicionar ${product.name} ao carrinho`}
             title="Adicionar ao carrinho"
           >
-            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+            <span className="sm:hidden">Adicionar</span>
           </button>
         )}
       </div>

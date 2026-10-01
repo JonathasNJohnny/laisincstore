@@ -18,6 +18,7 @@ import { RegisterPage } from "../pages/Register/RegisterPage";
 import { ProfilePage } from "../pages/Profile/ProfilePage";
 import { OrdersPage } from "../pages/Orders/OrdersPage";
 import { VerifyEmailPage } from "../pages/VerifyEmail/VerifyEmailPage";
+import { CookiesPage, LgpdPage } from "../pages/Legal/LegalInfoPage";
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +41,8 @@ export const router = createBrowserRouter([
       { path: "contato", element: <ContactPage /> },
       { path: "politica-de-privacidade", element: <PrivacyPage /> },
       { path: "termos", element: <TermsPage /> },
+      { path: "cookies", element: <CookiesPage /> },
+      { path: "lgpd", element: <LgpdPage /> },
       { path: "agradecimentos", element: <ThanksPage /> },
     ],
   },

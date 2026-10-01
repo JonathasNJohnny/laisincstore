@@ -8,10 +8,6 @@ const footerSections: FooterSection[] = [
   {
     title: "Ajuda",
     links: [
-      { label: "Central de Ajuda", href: "/ajuda" },
-      { label: "Rastrear Pedido", href: "/rastrear" },
-      { label: "Trocas e Devoluções", href: "/trocas" },
-      { label: "Perguntas Frequentes", href: "/faq" },
       { label: "Contato", href: "/contato" },
     ],
   },
@@ -20,9 +16,6 @@ const footerSections: FooterSection[] = [
     links: [
       { label: "Nossa História", href: "/sobre" },
       { label: "Agradecimentos", href: "/agradecimentos" },
-      { label: "Trabalhe Conosco", href: "/trabalhe-conosco" },
-      { label: "Imprensa", href: "/imprensa" },
-      { label: "Sustentabilidade", href: "/sustentabilidade" },
     ],
   },
   {

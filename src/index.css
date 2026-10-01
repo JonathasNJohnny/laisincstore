@@ -451,3 +451,8 @@ select {
   left: -0.5rem;
   animation-delay: 1s;
 }
+
+/* Os títulos do rodapé permanecem brancos nos dois temas. */
+footer h3 {
+  color: #ffffff !important;
+}

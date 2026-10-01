@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Search, ShoppingBag, User, Heart, LogOut, Sun, Moon } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Heart, LogOut, Sun, Moon } from "lucide-react";
 import { SocialLinks } from "../SocialLinks/SocialLinks";
-import { SearchBar } from "../SearchBar/SearchBar";
 import { CartDrawer } from "../CartDrawer/CartDrawer";
 import { useCart } from "../../contexts/CartContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -54,7 +53,6 @@ const socialLinks = [
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,7 +75,6 @@ export function Header() {
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsSearchOpen(false);
     setIsAccountOpen(false);
   }, [location]);
 
@@ -174,10 +171,6 @@ export function Header() {
               <SocialLinks links={socialLinks} variant="compact" />
             </div>
 
-            <div className="hidden lg:block lg:mr-8">
-              <SearchBar variant="header" placeholder="O que você procura?" />
-            </div>
-
             <div ref={accountMenuRef} className="relative flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setIsAccountOpen((open) => !open)}
@@ -254,14 +247,6 @@ export function Header() {
 
             <div className="lg:hidden flex items-center gap-2">
               <button
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors"
-                aria-label="Buscar"
-                aria-expanded={isSearchOpen}
-              >
-                <Search className="w-5 h-5" aria-hidden="true" />
-              </button>
-              <button
                 onClick={toggleCart}
                 className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors"
                 aria-label={`Carrinho, ${itemCount} itens`}
@@ -288,12 +273,6 @@ export function Header() {
               </button>
             </div>
           </div>
-
-          {isSearchOpen && (
-            <div className="lg:hidden py-4 border-t border-cinza-quente animate-slide-up">
-              <SearchBar variant="page" placeholder="Buscar produtos..." />
-            </div>
-          )}
 
           <nav
             id="mobile-menu"
