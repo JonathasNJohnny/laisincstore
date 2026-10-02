@@ -124,10 +124,10 @@ export function Header() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 bg-branco dark:bg-zinc-900 transition-all duration-300 ${
           isScrolled
-            ? "bg-branco/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-sm border-b border-cinza-quente dark:border-zinc-800"
-            : "bg-transparent"
+            ? "backdrop-blur-md shadow-sm border-b border-cinza-quente dark:border-zinc-800"
+            : ""
         }`}
         role="banner"
       >
@@ -248,7 +248,7 @@ export function Header() {
             <div className="lg:hidden flex items-center gap-2">
               <button
                 onClick={toggleCart}
-                className="relative p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors"
+                className="relative hidden p-2 rounded-xl text-grafite-arroxeado hover:bg-cinza-quente/50 transition-colors"
                 aria-label={`Carrinho, ${itemCount} itens`}
               >
                 <ShoppingBag className="w-5 h-5" aria-hidden="true" />
