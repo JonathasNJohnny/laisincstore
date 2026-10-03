@@ -39,6 +39,8 @@ export function normalizeApiProduct(apiProduct: ApiProduct): Product {
     price: finalPriceInCents,
     oldPrice:
       finalPriceInCents < originalPriceInCents ? originalPriceInCents : undefined,
+    createdAt: apiProduct.created_at,
+    updatedAt: apiProduct.updated_at,
     image: coverImage,
     images,
     badge:

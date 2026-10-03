@@ -9,6 +9,8 @@ export interface Product {
   description: string;
   price: number;
   oldPrice?: number;
+  createdAt?: string;
+  updatedAt?: string;
   image: string;
   images?: string[];
   badge?: BadgeType;

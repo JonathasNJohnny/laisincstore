@@ -523,6 +523,8 @@ export interface ApiProduct {
   }>;
   active?: number | boolean | string;
   order?: number;
+  created_at?: string;
+  updated_at?: string;
   variants?: ApiProduct[];
 }
 

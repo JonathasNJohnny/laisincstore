@@ -65,7 +65,7 @@ export function ProductCard({
                 {product.category}
               </p>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="mt-2 flex flex-col items-start gap-0 sm:flex-row sm:items-center sm:gap-2">
               <span className="text-sm font-bold text-rosa-lais sm:text-base">
                 {formatCurrency(product.price)}
               </span>
@@ -86,7 +86,6 @@ export function ProductCard({
             title="Adicionar ao carrinho"
           >
             <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <span className="sm:hidden">Adicionar</span>
           </button>
         )}
       </div>
@@ -179,7 +178,7 @@ export function ProductCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-start gap-0 sm:flex-row sm:items-center sm:gap-2">
           <span className="font-bold text-lg text-rosa-lais">
             {formatCurrency(product.price)}
           </span>
@@ -208,7 +207,7 @@ export function ProductCard({
               aria-label={`Adicionar ${product.name} ao carrinho`}
             >
               <ShoppingCart className="w-5 h-5 shrink-0" aria-hidden="true" />
-              Adicionar
+              <span className="hidden sm:inline">Adicionar</span>
             </Button>
           </div>
         )}

@@ -118,6 +118,19 @@ export function HomePage() {
     if (categoryPage >= categoryPageCount) setCategoryPage(0);
   }, [categoryPage, categoryPageCount]);
 
+  const promotionalProducts = liveProducts.filter(
+    (product) => product.oldPrice != null && product.oldPrice > product.price,
+  );
+  const newProducts = liveProducts.filter((product) => {
+    if (!product.createdAt) return false;
+    const createdAt = new Date(product.createdAt).getTime();
+    const lastMonth = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return (
+      Number.isFinite(createdAt) &&
+      createdAt >= lastMonth
+    );
+  });
+
   return (
     <>
       <Hero banners={heroBanners} />
@@ -207,28 +220,33 @@ export function HomePage() {
         </div>
       </section>
 
-      <section
-        className="container py-12 lg:py-16"
-        aria-labelledby="api-products-title"
-      >
-        <SectionTitle
-          title="Produtos da Loja"
-          subtitle="Atualizados diretamente da API da Laís Inc"
-          subtitleOnTitleHover
-          action={{ label: "Ver loja completa", href: "/loja" }}
-        />
-        <ProductCarousel
-          products={liveProducts}
-          loading={loadingProducts}
-          onAddToCart={addItem}
-          emptyMessage="Nenhum produto disponível no momento"
-        />
-      </section>
+      {(loadingProducts || promotionalProducts.length > 0) && (
+        <div className="mt-5">
+          <section
+            className="container py-12 lg:py-16"
+            aria-labelledby="api-products-title"
+          >
+            <SectionTitle
+              title="Promoções"
+              subtitle="Aproveite nossas ofertas especiais e garanta os melhores achados pelo menor preço."
+              subtitleOnTitleHover
+              action={{ label: "Ver loja completa", href: "/loja" }}
+            />
+            <ProductCarousel
+              products={promotionalProducts}
+              loading={loadingProducts}
+              onAddToCart={addItem}
+              emptyMessage="Nenhum produto disponível no momento"
+            />
+          </section>
+        </div>
+      )}
 
-      <section
-        className="container py-12 lg:py-16"
-        aria-labelledby="new-products-title"
-      >
+      {(loadingProducts || newProducts.length > 0) && (
+        <section
+          className="container py-12 lg:py-16"
+          aria-labelledby="new-products-title"
+        >
         <SectionTitle
           className="mt-[20px]"
           title="Novidades"
@@ -237,12 +255,13 @@ export function HomePage() {
           action={{ label: "Ver todas novidades", href: "/loja?badge=Novo" }}
         />
         <ProductCarousel
-          products={liveProducts}
+          products={newProducts}
           loading={loadingProducts}
           onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
         />
-      </section>
+        </section>
+      )}
 
       <section
         className="container pt-[58px] pb-12 lg:pt-[74px] lg:pb-16"
