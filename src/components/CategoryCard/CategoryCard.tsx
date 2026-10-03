@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Category } from "../../types";
 
@@ -12,6 +13,53 @@ export function CategoryCard({
   variant = "default",
   className = "",
 }: CategoryCardProps) {
+  const images = category.images?.length ? category.images : [category.image];
+  const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    setActiveImage(0);
+  }, [category.id]);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = window.setInterval(() => {
+      setActiveImage((current) => (current + 1) % images.length);
+    }, 3500);
+    return () => window.clearInterval(interval);
+  }, [category.id, images.length]);
+
+  if (variant === "compact") {
+    return (
+      <Link
+        to={`/categoria/${category.slug}`}
+        className={`group relative block overflow-hidden rounded-2xl border border-cinza-quente bg-branco shadow-sm ${className}`}
+        aria-label={`Ver categoria ${category.name}, ${category.productCount} produtos`}
+      >
+        <div className="relative aspect-[1.55/1] overflow-hidden bg-cinza-quente/50">
+          {images.map((image, index) => (
+            <img
+              key={`${image}-${index}`}
+              src={image}
+              alt=""
+              crossOrigin="anonymous"
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 group-hover:scale-105 ${index === activeImage ? "opacity-100" : "opacity-0"}`}
+              loading="lazy"
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-roxo-profundo/80 via-roxo-profundo/15 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+            <h3 className="truncate text-sm font-semibold text-branco sm:text-base">
+              {category.name}
+            </h3>
+            <p className="text-xs text-branco/80">
+              {category.productCount} {category.productCount === 1 ? "produto" : "produtos"}
+            </p>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   return (
     <Link
       to={`/categoria/${category.slug}`}

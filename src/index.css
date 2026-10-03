@@ -53,6 +53,8 @@
   --font-sans: 'Poppins', sans-serif;
 
   --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-carousel-next: carouselNext 0.22s ease-out;
+  --animate-carousel-previous: carouselPrevious 0.22s ease-out;
   --animate-slide-up: slideUp 0.5s ease-out;
   --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
   --animate-sparkle: sparkle 1.5s ease-in-out infinite;
@@ -64,6 +66,30 @@
 
     100% {
       opacity: 1;
+    }
+  }
+
+  @keyframes carouselNext {
+    0% {
+      opacity: 0.35;
+      transform: translateX(7%);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes carouselPrevious {
+    0% {
+      opacity: 0.35;
+      transform: translateX(-7%);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateX(0);
     }
   }
 

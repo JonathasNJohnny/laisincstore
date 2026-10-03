@@ -7,6 +7,7 @@ interface SectionTitleProps {
     label: string;
     href: string;
   };
+  subtitleOnTitleHover?: boolean;
   align?: "left" | "center";
   className?: string;
 }
@@ -15,6 +16,7 @@ export function SectionTitle({
   title,
   subtitle,
   action,
+  subtitleOnTitleHover = false,
   align = "left",
   className = "",
 }: SectionTitleProps) {
@@ -22,16 +24,21 @@ export function SectionTitle({
     <div
       className={`flex flex-col items-start ${align === "center" ? "items-center" : ""} gap-2 mb-6 ${className}`}
     >
-      <div className="flex items-center gap-3">
-        <div
-          className="w-1 h-8 bg-rosa-lais rounded-full animate-pulse-soft"
-          aria-hidden="true"
-        />
-        <h2 className="font-serif text-2xl lg:text-3xl font-bold text-roxo-profundo">
-          {title}
-        </h2>
+      <div>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-1 h-8 bg-rosa-lais rounded-full animate-pulse-soft"
+            aria-hidden="true"
+          />
+          <h2
+            title={subtitleOnTitleHover ? subtitle : undefined}
+            className="font-serif text-2xl lg:text-3xl font-bold text-roxo-profundo"
+          >
+            {title}
+          </h2>
+        </div>
       </div>
-      {subtitle && (
+      {subtitle && !subtitleOnTitleHover && (
         <p className="text-cinza-amarronzado max-w-2xl">{subtitle}</p>
       )}
       {action && (

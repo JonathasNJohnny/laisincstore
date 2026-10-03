@@ -4,7 +4,7 @@ import type { Product } from "../../types";
 
 interface ProductGridProps {
   products: Product[];
-  variant?: "default" | "compact" | "featured";
+  variant?: "default" | "compact" | "featured" | "carousel";
   showAddToCart?: boolean;
   onAddToCart?: (product: Product, quantity: number) => void;
   onToggleFavorite?: (product: Product) => void;
@@ -32,6 +32,7 @@ export function ProductGrid({
       "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6",
     compact: "grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4",
     featured: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6",
+    carousel: "grid grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4",
   };
 
   if (loading) {

@@ -23,6 +23,7 @@ export interface Category {
   name: string;
   description: string;
   image: string;
+  images?: string[];
   productCount: number;
 }
 

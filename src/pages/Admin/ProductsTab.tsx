@@ -205,8 +205,13 @@ export function ProductsTab() {
     setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const remove = async (id: number | string) => {
-    if (!window.confirm("Deseja realmente remover este produto?")) return;
+  const remove = async (product: any) => {
+    const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+    const message = hasVariants
+      ? "Este produto possui variantes vinculadas. Deseja realmente removê-lo?"
+      : "Deseja realmente remover este produto?";
+    if (!window.confirm(message)) return;
+    const id = product.id;
     try {
       await deleteProduct(id);
       setProducts((current) =>
@@ -501,7 +506,7 @@ export function ProductsTab() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => void remove(product.id)}
+                        onClick={() => void remove(product)}
                         className="rounded-lg border border-rose-300 px-3 py-2 text-sm text-rose-700"
                       >
                         Remover

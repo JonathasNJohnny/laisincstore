@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Hero } from "../../components/Hero/Hero";
 import { SectionTitle } from "../../components/SectionTitle/SectionTitle";
-import { ProductGrid } from "../../components/ProductGrid/ProductGrid";
+import { ProductCarousel } from "../../components/ProductCarousel/ProductCarousel";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
 import { loadProducts } from "../../components/ProductList/ProductList";
 // import { Newsletter } from "../../components/Newsletter/Newsletter";
@@ -16,6 +17,24 @@ export function HomePage() {
   const [liveProducts, setLiveProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([]);
+  const [categoryPage, setCategoryPage] = useState(0);
+  const [categoryPageSize, setCategoryPageSize] = useState(4);
+  const [categoryDirection, setCategoryDirection] = useState<
+    "next" | "previous"
+  >("next");
+
+  useEffect(() => {
+    const updatePageSize = () => {
+      setCategoryPageSize(
+        window.matchMedia("(min-width: 1024px)").matches ? 8 : 4,
+      );
+      setCategoryDirection("next");
+      setCategoryPage(0);
+    };
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -70,6 +89,9 @@ export function HomePage() {
     return Array.from(categoryMap.entries()).map(([name, categoryProducts]) => {
       const randomProduct =
         categoryProducts[Math.floor(Math.random() * categoryProducts.length)];
+      const images = Array.from(
+        new Set(categoryProducts.map((product) => product.image)),
+      );
 
       return {
         id: slugify(name),
@@ -77,10 +99,24 @@ export function HomePage() {
         name,
         description: `Produtos selecionados da categoria ${name}.`,
         image: randomProduct.image,
+        images,
         productCount: categoryProducts.length,
       };
     });
   }, [liveProducts]);
+
+  const categoryPageCount = Math.max(
+    1,
+    Math.ceil(categories.length / categoryPageSize),
+  );
+  const visibleCategories = categories.slice(
+    categoryPage * categoryPageSize,
+    (categoryPage + 1) * categoryPageSize,
+  );
+
+  useEffect(() => {
+    if (categoryPage >= categoryPageCount) setCategoryPage(0);
+  }, [categoryPage, categoryPageCount]);
 
   return (
     <>
@@ -93,16 +129,81 @@ export function HomePage() {
         <SectionTitle
           title="Nossas Categorias"
           subtitle="Explore nossos universos e encontre o que combina com você"
+          subtitleOnTitleHover
           action={{ label: "Ver todas", href: "/loja" }}
         />
-        <div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6"
-          role="list"
-          aria-label="Categorias"
-        >
-          {categories.slice(0, 4).map((category) => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
+        <div className="relative" aria-label="Categorias">
+          <button
+            type="button"
+            onClick={() => {
+              setCategoryDirection("previous");
+              setCategoryPage((page) => Math.max(0, page - 1));
+            }}
+            disabled={categoryPage === 0}
+            className="absolute -left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-cinza-quente bg-branco text-roxo-profundo shadow-md transition hover:bg-cream disabled:pointer-events-none disabled:opacity-0"
+            aria-label="Categorias anteriores"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div className="overflow-hidden px-1 py-1">
+            <div
+              key={categoryPage}
+              className={
+                categoryDirection === "next"
+                  ? "animate-carousel-next"
+                  : "animate-carousel-previous"
+              }
+            >
+              <div
+                className="grid grid-cols-4 gap-3 lg:grid-cols-8 lg:gap-4"
+                role="list"
+              >
+                {visibleCategories.map((category) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    variant="compact"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCategoryDirection("next");
+              setCategoryPage((page) =>
+                Math.min(categoryPageCount - 1, page + 1),
+              );
+            }}
+            disabled={categoryPage >= categoryPageCount - 1}
+            className="absolute -right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-cinza-quente bg-branco text-roxo-profundo shadow-md transition hover:bg-cream disabled:pointer-events-none disabled:opacity-0"
+            aria-label="Próximas categorias"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          {categoryPageCount > 1 && (
+            <div
+              className="mt-4 flex justify-center gap-2"
+              aria-label="Páginas de categorias"
+            >
+              {Array.from({ length: categoryPageCount }, (_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    setCategoryDirection(
+                      index >= categoryPage ? "next" : "previous",
+                    );
+                    setCategoryPage(index);
+                  }}
+                  className={`h-2 rounded-full transition-all ${index === categoryPage ? "w-6 bg-rosa-lais" : "w-2 bg-cinza-quente"}`}
+                  aria-label={`Ir para página ${index + 1} de categorias`}
+                  aria-current={index === categoryPage ? "page" : undefined}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -113,10 +214,11 @@ export function HomePage() {
         <SectionTitle
           title="Produtos da Loja"
           subtitle="Atualizados diretamente da API da Laís Inc"
+          subtitleOnTitleHover
           action={{ label: "Ver loja completa", href: "/loja" }}
         />
-        <ProductGrid
-          products={liveProducts.slice(0, 8)}
+        <ProductCarousel
+          products={liveProducts}
           loading={loadingProducts}
           onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
@@ -131,10 +233,11 @@ export function HomePage() {
           className="mt-[20px]"
           title="Novidades"
           subtitle="Acabaram de chegar, feitos com carinho para você"
+          subtitleOnTitleHover
           action={{ label: "Ver todas novidades", href: "/loja?badge=Novo" }}
         />
-        <ProductGrid
-          products={liveProducts.slice(0, 8)}
+        <ProductCarousel
+          products={liveProducts}
           loading={loadingProducts}
           onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
@@ -149,13 +252,14 @@ export function HomePage() {
           className="mt-[20px]"
           title="Em Destaque"
           subtitle="Nossos queridinhos, escolhidos a dedo"
+          subtitleOnTitleHover
           action={{
             label: "Ver todos destaques",
             href: "/loja?badge=Destaque",
           }}
         />
-        <ProductGrid
-          products={liveProducts.slice(0, 8)}
+        <ProductCarousel
+          products={liveProducts}
           loading={loadingProducts}
           onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
@@ -170,10 +274,11 @@ export function HomePage() {
           className="mt-[20px]"
           title="Mais produtos"
           subtitle="Confira nossas novidades"
+          subtitleOnTitleHover
           action={{ label: "Ver todos os produtos", href: "/loja" }}
         />
-        <ProductGrid
-          products={liveProducts.slice(0, 8)}
+        <ProductCarousel
+          products={liveProducts}
           loading={loadingProducts}
           onAddToCart={addItem}
           emptyMessage="Nenhum produto disponível no momento"
@@ -188,6 +293,7 @@ export function HomePage() {
           <SectionTitle
             title="Sobre a Laís Inc"
             subtitle="Cada peça conta uma história, cada detalhe carrega um pedacinho de magia"
+            subtitleOnTitleHover
             align="center"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mt-8">

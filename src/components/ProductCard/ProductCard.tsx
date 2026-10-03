@@ -9,7 +9,7 @@ import type { Product } from "../../types";
 
 interface ProductCardProps {
   product: Product;
-  variant?: "default" | "compact" | "featured";
+  variant?: "default" | "compact" | "featured" | "carousel";
   showAddToCart?: boolean;
   onAddToCart?: (product: Product, quantity: number) => void;
   onToggleFavorite?: (product: Product) => void;
