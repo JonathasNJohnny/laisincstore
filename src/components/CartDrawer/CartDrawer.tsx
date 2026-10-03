@@ -117,9 +117,16 @@ export function CartDrawer() {
                       >
                         {item.product.name}
                       </Link>
-                      <p className="text-xs text-cinza-amarronzado mt-0.5">
-                        {formatCurrency(item.product.price)}
-                      </p>
+                      <div className="mt-0.5 flex items-baseline gap-2">
+                        <span className="text-xs font-semibold text-rosa-lais">
+                          {formatCurrency(item.product.price)}
+                        </span>
+                        {item.product.oldPrice && (
+                          <span className="text-[11px] text-cinza-amarronzado line-through">
+                            {formatCurrency(item.product.oldPrice)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border border-cinza-quente rounded-xl overflow-hidden">

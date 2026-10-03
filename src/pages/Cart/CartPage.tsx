@@ -188,9 +188,16 @@ export function CartPage() {
                     <p className="text-sm text-cinza-amarronzado mt-1">
                       {item.product.category}
                     </p>
-                    <p className="text-sm font-medium text-rosa-lais mt-2">
-                      {formatCurrency(item.product.price)}
-                    </p>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-sm font-medium text-rosa-lais">
+                        {formatCurrency(item.product.price)}
+                      </span>
+                      {item.product.oldPrice && (
+                        <span className="text-xs text-cinza-amarronzado line-through">
+                          {formatCurrency(item.product.oldPrice)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <QuantitySelector
@@ -210,9 +217,16 @@ export function CartPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-grafite-arroxeado">
-                    {formatCurrency(item.product.price * item.quantity)}
-                  </p>
+                  <div>
+                    <p className="font-semibold text-grafite-arroxeado">
+                      {formatCurrency(item.product.price * item.quantity)}
+                    </p>
+                    {item.product.oldPrice && (
+                      <p className="text-xs text-cinza-amarronzado line-through">
+                        {formatCurrency(item.product.oldPrice * item.quantity)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}

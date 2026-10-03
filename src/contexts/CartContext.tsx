@@ -28,6 +28,7 @@ function makeCartProduct(item: { productId: number | string; name: string; price
     category: existing?.category ?? "Produto",
     description: existing?.description ?? "",
     price: Number.isFinite(price) ? price : 0,
+    oldPrice: existing?.oldPrice,
     image: existing?.image ?? "/imagem-padrao.png",
     images: existing?.images,
     stock: Number(item.stock),

@@ -504,6 +504,9 @@ export interface ApiProduct {
   slug?: string;
   description?: string;
   price: string | number;
+  sale?: string | number | null;
+  final_price?: string | number | null;
+  finalPrice?: string | number | null;
   stock?: number;
   weight_grams?: number | null;
   height?: number | null;

@@ -15,6 +15,14 @@ export function invalidateProductsCache() {
 export function normalizeApiProduct(apiProduct: ApiProduct): Product {
   const numericPrice = Number(apiProduct.price ?? 0);
   const safePrice = Number.isFinite(numericPrice) ? numericPrice : 0;
+  const numericSale = Number(apiProduct.sale ?? 0);
+  const safeSale = Number.isFinite(numericSale) ? Math.max(0, numericSale) : 0;
+  const apiFinalPrice = Number(apiProduct.final_price ?? apiProduct.finalPrice);
+  const finalPrice = Number.isFinite(apiFinalPrice)
+    ? Math.max(0, apiFinalPrice)
+    : Math.max(0, safePrice - safeSale);
+  const originalPriceInCents = Math.round(safePrice * 100);
+  const finalPriceInCents = Math.round(finalPrice * 100);
   const images = (apiProduct.uploads ?? [])
     .slice()
     .sort((first, second) => (first.position ?? 0) - (second.position ?? 0))
@@ -28,7 +36,9 @@ export function normalizeApiProduct(apiProduct: ApiProduct): Product {
     variant: apiProduct.variant,
     category: apiProduct.category || "Sem categoria",
     description: apiProduct.description || "Produto da Laís Inc.",
-    price: Math.round(safePrice * 100),
+    price: finalPriceInCents,
+    oldPrice:
+      finalPriceInCents < originalPriceInCents ? originalPriceInCents : undefined,
     image: coverImage,
     images,
     badge:

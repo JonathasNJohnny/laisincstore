@@ -17,6 +17,7 @@ type ProductForm = {
   slug: string;
   description: string;
   price: string;
+  sale: string;
   stock: string;
   weightGrams: string;
   height: string;
@@ -38,6 +39,7 @@ const emptyForm: ProductForm = {
   slug: "",
   description: "",
   price: "",
+  sale: "",
   stock: "",
   weightGrams: "",
   height: "",
@@ -46,6 +48,15 @@ const emptyForm: ProductForm = {
   variant: "",
   active: true,
   order: false,
+};
+
+const formatProductPrice = (value: unknown) =>
+  `R$ ${Number(value ?? 0).toFixed(2).replace(".", ",")}`;
+
+const getFinalProductPrice = (product: any) => {
+  if (product.final_price != null) return Number(product.final_price);
+  if (product.finalPrice != null) return Number(product.finalPrice);
+  return Math.max(0, Number(product.price ?? 0) - Number(product.sale ?? 0));
 };
 
 export function ProductsTab() {
@@ -127,6 +138,7 @@ export function ProductsTab() {
       payload.append("slug", form.slug || form.name);
       payload.append("description", form.variant ? "" : form.description);
       payload.append("price", form.price);
+      payload.append("sale", form.sale || "0");
       payload.append("stock", form.stock);
       payload.append("weightGrams", String(weight));
       payload.append("height", form.height);
@@ -161,6 +173,7 @@ export function ProductsTab() {
       slug: product.slug ?? "",
       description: product.description ?? "",
       price: String(product.price ?? ""),
+      sale: String(product.sale ?? "0"),
       stock: String(product.stock ?? 0),
       weightGrams:
         product.weight_grams == null ? "" : String(product.weight_grams),
@@ -259,13 +272,19 @@ export function ProductsTab() {
             value={form.slug}
             onChange={(slug) => setForm({ ...form, slug })}
           />
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-4">
             <Field
               label="Preço"
               type="number"
               value={form.price}
               onChange={(price) => setForm({ ...form, price })}
               required
+            />
+            <Field
+              label="Desconto (R$)"
+              type="number"
+              value={form.sale}
+              onChange={(sale) => setForm({ ...form, sale })}
             />
             <Field
               label="Estoque"
@@ -452,10 +471,24 @@ export function ProductsTab() {
                         {product.order ? "Encomenda" : "Pronta entrega"}
                       </span>
                     </div>
-                    <div className="mt-3 flex justify-between text-sm">
-                      <span>
-                        R$ {Number(product.price).toFixed(2).replace(".", ",")}
-                      </span>
+                    <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
+                      <div>
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="font-semibold text-roxo-profundo">
+                            {formatProductPrice(getFinalProductPrice(product))}
+                          </span>
+                          {Number(product.sale ?? 0) > 0 && (
+                            <span className="text-xs text-cinza-amarronzado line-through">
+                              {formatProductPrice(product.price)}
+                            </span>
+                          )}
+                        </div>
+                        {Number(product.sale ?? 0) > 0 && (
+                          <p className="text-xs text-rosa-lais">
+                            Desconto: {formatProductPrice(product.sale)}
+                          </p>
+                        )}
+                      </div>
                       <span>Estoque: {product.stock}</span>
                     </div>
                     <div className="mt-4 flex gap-2">
