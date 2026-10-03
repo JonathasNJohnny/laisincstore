@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const rankingUrl = "https://laisinc.com.br/Ranking/getMonthlyRanking";
 
@@ -42,16 +42,30 @@ export function ThanksPage() {
   const [closedMonths, setClosedMonths] = useState<Record<string, string>>({});
   const [yearVips, setYearVips] = useState<Record<string, string[]>>({});
   const [year, setYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const rankingCache = useRef(new Map<string, RankingResponse>());
 
   useEffect(() => {
     const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
 
     async function loadRanking() {
       try {
-        const response = await fetch(
-          `${rankingUrl}?ano=${year}&mes=${currentMonth}`,
+        let monthToLoad = selectedMonth;
+        let data: RankingResponse | undefined;
+
+        while (monthToLoad >= 1) {
+          const cacheKey = `${year}-${monthToLoad}`;
+          const cachedRanking = rankingCache.current.get(cacheKey);
+
+          if (cachedRanking) {
+            data = cachedRanking;
+          } else {
+            const response = await fetch(
+              `${rankingUrl}?ano=${year}&mes=${monthToLoad}`,
           { signal: controller.signal },
         );
 
@@ -59,11 +73,27 @@ export function ThanksPage() {
           throw new Error("Não foi possível carregar o ranking.");
         }
 
-        const data: RankingResponse = await response.json();
-        setRanking(data.ranking);
-        setTops(data.tops);
-        setClosedMonths(data.fechados);
-        setYearVips(data.vips);
+        const fetchedData: RankingResponse = await response.json();
+        data = fetchedData;
+        rankingCache.current.set(cacheKey, fetchedData);
+          }
+
+          if (data?.ranking.length > 0 || monthToLoad === 1) {
+            break;
+          }
+
+          monthToLoad -= 1;
+        }
+
+        const rankingData = data;
+        if (!rankingData) {
+          throw new Error("Ranking request failed.");
+        }
+
+        setRanking(rankingData.ranking);
+        setTops(rankingData.tops);
+        setClosedMonths(rankingData.fechados);
+        setYearVips(rankingData.vips);
       } catch (requestError) {
         if (
           requestError instanceof DOMException &&
@@ -85,7 +115,7 @@ export function ThanksPage() {
     loadRanking();
 
     return () => controller.abort();
-  }, [year]);
+  }, [selectedMonth, year]);
 
   const repeatedWinnerNames = new Set(
     tops
@@ -169,13 +199,17 @@ export function ThanksPage() {
                     firstVipMonthByName.get(winner.username) === index;
 
                   return (
-                    <div
-                      className={`overflow-hidden rounded-lg border p-2 ${
-                        index + 1 === currentMonth && !isClosed
+                    <button
+                      className={`w-full overflow-hidden rounded-lg border p-2 text-left transition-colors hover:border-rosa-lais focus:outline-none focus:ring-2 focus:ring-rosa-lais ${
+                        index + 1 === selectedMonth && !isClosed
                           ? "border-rosa-lais bg-[#ffe0f1] dark:bg-transparent"
                           : "border-[#d8d8e9] bg-[#fffefd]"
                       }`}
                       key={month}
+                      onClick={() => setSelectedMonth(index + 1)}
+                      type="button"
+                      aria-label={`Carregar ranking de ${month}`}
+                      aria-pressed={selectedMonth === index + 1}
                     >
                       <p className="mb-1 text-xs font-bold text-roxo-profundo">
                         {month}
@@ -208,7 +242,7 @@ export function ThanksPage() {
                       ) : (
                         <p className="text-xs text-cinza-amarronzado">-</p>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
