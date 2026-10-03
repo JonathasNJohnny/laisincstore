@@ -115,6 +115,7 @@ export function BoxesTab() {
       active: isActive(box),
     });
     setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const remove = async (id: number | string) => {

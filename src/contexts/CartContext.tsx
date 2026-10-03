@@ -111,7 +111,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!hasAuthenticatedSession) { setItems((previous) => previous.filter((item) => item.product.id !== productId)); return; }
     await removeCartItem(productId);
     setItems((previous) => previous.filter((item) => item.product.id !== productId));
-  }, [hasAuthenticatedSession]);
+    await refreshCart();
+  }, [hasAuthenticatedSession, refreshCart]);
 
   const updateQuantity = useCallback(async (productId: string, quantity: number) => {
     if (quantity <= 0) return removeItem(productId);

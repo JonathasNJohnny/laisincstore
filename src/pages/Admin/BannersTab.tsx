@@ -39,7 +39,7 @@ export function BannersTab() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível salvar o banner."); }
     finally { setSaving(false); }
   };
-  const edit = (banner: HeroBanner) => { setForm({ id: banner.id, imageUrl: banner.image_url ?? banner.image ?? "", redirectLink: banner.redirect_link ?? "", active: banner.active !== 0 && banner.active !== false && banner.active !== "0", position: String(banner.position ?? 0) }); setImage(null); setError(""); };
+  const edit = (banner: HeroBanner) => { setForm({ id: banner.id, imageUrl: banner.image_url ?? banner.image ?? "", redirectLink: banner.redirect_link ?? "", active: banner.active !== 0 && banner.active !== false && banner.active !== "0", position: String(banner.position ?? 0) }); setImage(null); setError(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const remove = async (id: number | string) => { if (!window.confirm("Deseja realmente excluir este banner?")) return; try { await deleteHeroBanner(id); if (String(form.id) === String(id)) reset(); await loadBanners(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível excluir o banner."); } };
 
   return <div role="tabpanel" className="grid gap-8 lg:grid-cols-[1fr_1fr]">

@@ -704,7 +704,8 @@ export async function deleteProduct(id: number | string) {
     throw new Error("Não foi possível remover o produto.");
   }
 
-  return response.json();
+  if (response.status === 204) return;
+  return response.json().catch(() => undefined);
 }
 
 export function getImageUrl(imageUrl?: string | null): string {

@@ -190,6 +190,7 @@ export function ProductsTab() {
           : [],
     );
     setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const remove = async (id: number | string) => {
     if (!window.confirm("Deseja realmente remover este produto?")) return;

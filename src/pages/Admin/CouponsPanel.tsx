@@ -221,6 +221,7 @@ export function CouponsPanel() {
       validUntil: localDate(coupon.validUntil),
     });
     setSearch({ category: "", limitedProducts: "", exceptProducts: "" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

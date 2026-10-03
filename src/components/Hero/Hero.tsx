@@ -199,14 +199,14 @@ export function Hero({
             </div>
             <h1
               id="hero-title"
-              className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-roxo-profundo leading-tight mb-4"
+              className="font-serif text-2xl sm:text-5xl lg:text-6xl font-bold text-roxo-profundo leading-tight mb-4"
             >
               {title}
             </h1>
-            <p className="text-lg lg:text-xl text-cinza-amarronzado mb-8 max-w-xl mx-auto lg:mx-0">
+            <p className="hidden lg:block text-lg lg:text-xl text-cinza-amarronzado mb-8 max-w-xl mx-auto lg:mx-0">
               {subtitle}
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <div className="hidden lg:flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               <Button size="lg" asChild>
                 <Link to={primaryAction.href}>{primaryAction.label}</Link>
               </Button>
