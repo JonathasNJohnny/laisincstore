@@ -46,6 +46,7 @@ export function ThanksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const rankingCache = useRef(new Map<string, RankingResponse>());
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,6 +57,7 @@ export function ThanksPage() {
       try {
         let monthToLoad = selectedMonth;
         let data: RankingResponse | undefined;
+        const shouldFallbackToPreviousMonth = isInitialLoad.current;
 
         while (monthToLoad >= 1) {
           const cacheKey = `${year}-${monthToLoad}`;
@@ -78,7 +80,11 @@ export function ThanksPage() {
         rankingCache.current.set(cacheKey, fetchedData);
           }
 
-          if (data?.ranking.length > 0 || monthToLoad === 1) {
+          if (
+            data?.ranking.length > 0 ||
+            !shouldFallbackToPreviousMonth ||
+            monthToLoad === 1
+          ) {
             break;
           }
 
@@ -88,6 +94,11 @@ export function ThanksPage() {
         const rankingData = data;
         if (!rankingData) {
           throw new Error("Ranking request failed.");
+        }
+
+        isInitialLoad.current = false;
+        if (monthToLoad !== selectedMonth) {
+          setSelectedMonth(monthToLoad);
         }
 
         setRanking(rankingData.ranking);
@@ -206,7 +217,10 @@ export function ThanksPage() {
                           : "border-[#d8d8e9] bg-[#fffefd]"
                       }`}
                       key={month}
-                      onClick={() => setSelectedMonth(index + 1)}
+                      onClick={() => {
+                        isInitialLoad.current = false;
+                        setSelectedMonth(index + 1);
+                      }}
                       type="button"
                       aria-label={`Carregar ranking de ${month}`}
                       aria-pressed={selectedMonth === index + 1}
