@@ -2,7 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode } from "react";
 import type { CartContextType, CartItem, Product } from "../types";
 import { useAuth } from "./AuthContext";
-import { addCartItem, getCart, removeCartItem, updateCartItem } from "../services/api";
+import {
+  addCartItem,
+  getCart,
+  getImageUrl,
+  getProducts,
+  removeCartItem,
+  updateCartItem,
+  type ApiProduct,
+} from "../services/api";
 import { AUTH_TOKEN_KEY } from "../services/users";
 import { slugify } from "../utils/slugify";
 
@@ -35,6 +43,45 @@ function makeCartProduct(item: { productId: number | string; name: string; price
   };
 }
 
+function normalizeCatalogProduct(apiProduct: ApiProduct): Product {
+  const originalPrice = Number(apiProduct.price ?? 0);
+  const sale = Math.max(0, Number(apiProduct.sale ?? 0));
+  const returnedFinalPrice = Number(
+    apiProduct.final_price ?? apiProduct.finalPrice,
+  );
+  const finalPrice = Number.isFinite(returnedFinalPrice)
+    ? Math.max(0, returnedFinalPrice)
+    : Math.max(0, originalPrice - sale);
+  const originalPriceInCents = Math.round(originalPrice * 100);
+  const finalPriceInCents = Math.round(finalPrice * 100);
+  const upload = apiProduct.uploads?.slice().sort(
+    (first, second) => (first.position ?? 0) - (second.position ?? 0),
+  )[0];
+
+  return {
+    id: String(apiProduct.id),
+    slug: apiProduct.slug ?? slugify(apiProduct.name),
+    name: apiProduct.name,
+    variant: apiProduct.variant,
+    category: apiProduct.category ?? "Produto",
+    description: apiProduct.description ?? "",
+    price: finalPriceInCents,
+    oldPrice:
+      finalPriceInCents < originalPriceInCents ? originalPriceInCents : undefined,
+    image: getImageUrl(upload?.url ?? apiProduct.image_url),
+    images: apiProduct.uploads?.map((item) => getImageUrl(item.url)),
+    stock: Number(apiProduct.stock ?? 0),
+  };
+}
+
+async function loadCurrentProducts() {
+  const products = await getProducts();
+  return new Map(products.map((product) => {
+    const normalized = normalizeCatalogProduct(product);
+    return [normalized.id, normalized] as const;
+  }));
+}
+
 function toApiProductId(productId: string | number): string | number {
   const numericId = Number(productId);
   return Number.isInteger(numericId) ? numericId : productId;
@@ -52,9 +99,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const refreshCart = useCallback(async () => {
     if (!localStorage.getItem(AUTH_TOKEN_KEY)) return;
-    const { cart } = await getCart();
+    const [{ cart }, currentProducts] = await Promise.all([
+      getCart(),
+      loadCurrentProducts(),
+    ]);
     const products = Array.from(knownProductsRef.current.values());
-    setItems(cart.items.map((item) => ({ product: makeCartProduct(item, products), quantity: Number(item.quantity) })));
+    setItems(cart.items.map((item) => ({
+      product:
+        currentProducts.get(String(item.productId)) ??
+        makeCartProduct(item, products),
+      quantity: Number(item.quantity),
+    })));
   }, []);
 
   useEffect(() => {
@@ -77,6 +132,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.error("Não foi possível carregar o carrinho:", error);
     });
   }, [hasAuthenticatedSession, refreshCart, sessionToken, user]);
+
+  useEffect(() => {
+    if (hasAuthenticatedSession) return;
+
+    loadCurrentProducts()
+      .then((currentProducts) => {
+        setItems((previous) => previous.map((item) => ({
+          ...item,
+          product: currentProducts.get(item.product.id) ?? item.product,
+        })));
+      })
+      .catch((error) => {
+        console.error("Não foi possível atualizar os preços do carrinho:", error);
+      });
+  }, [hasAuthenticatedSession]);
 
   useEffect(() => {
     if (!hasAuthenticatedSession) pendingLocalItemsRef.current = items;
