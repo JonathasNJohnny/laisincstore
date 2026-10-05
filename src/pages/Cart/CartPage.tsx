@@ -72,7 +72,14 @@ export function CartPage() {
     let active = true;
     setIsLoadingShipping(true);
     setShippingError("");
-    void getShippingQuote(destinationPostalCode)
+    void getShippingQuote(
+      destinationPostalCode,
+      undefined,
+      items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })),
+    )
       .then((options) => {
         if (!active) return;
         const lowestPrice = options.reduce<ShippingQuote | null>(

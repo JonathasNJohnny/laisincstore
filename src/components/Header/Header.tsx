@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Heart, LogOut, Sun, Moon } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { SocialLinks } from "../SocialLinks/SocialLinks";
 import { CartDrawer } from "../CartDrawer/CartDrawer";
 import { useCart } from "../../contexts/CartContext";
@@ -61,7 +62,7 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { getItemCount, toggleCart } = useCart();
-  const { user, login, logout } = useAuth();
+  const { user, login, loginWithGoogle, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +120,24 @@ export function Header() {
       } else setLoginError(error instanceof Error ? error.message : "Não foi possível entrar.");
     }
     finally { setIsLoggingIn(false); }
+  }
+
+  async function handleGoogleLogin(credential?: string) {
+    if (!credential) {
+      setLoginError("Não foi possível obter a credencial do Google.");
+      return;
+    }
+
+    setLoginError("");
+    setIsLoggingIn(true);
+    try {
+      await loginWithGoogle(credential);
+      setIsAccountOpen(false);
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Não foi possível entrar com Google.");
+    } finally {
+      setIsLoggingIn(false);
+    }
   }
 
   return (
@@ -238,6 +257,14 @@ export function Header() {
                     <label className="grid gap-1 text-sm text-grafite-arroxeado dark:text-zinc-200">Senha<input className="rounded-xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-800 text-grafite-arroxeado dark:text-zinc-100 px-3 py-2 focus:outline-none focus:border-rosa-lais" type="password" value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
                     {loginError && <p className="text-sm text-red-600 dark:text-red-400">{loginError}</p>}
                     <button disabled={isLoggingIn} className="w-full rounded-xl bg-rosa-lais px-4 py-2.5 font-medium text-branco disabled:opacity-50 hover:opacity-90 transition-opacity">{isLoggingIn ? "Entrando..." : "Entrar"}</button>
+                    <div className="relative py-1 text-center before:absolute before:inset-x-0 before:top-1/2 before:border-t before:border-cinza-quente dark:before:border-zinc-700"><span className="relative bg-branco px-2 text-xs text-cinza-amarronzado dark:bg-zinc-900 dark:text-zinc-400">ou</span></div>
+                    <div className="flex justify-center">
+                      <GoogleLogin
+                        onSuccess={(response) => void handleGoogleLogin(response.credential)}
+                        onError={() => setLoginError("Login Google cancelado ou falhou.")}
+                        text="signin_with"
+                      />
+                    </div>
                     <p className="text-center text-sm text-cinza-amarronzado dark:text-zinc-400">Ainda não tem conta? <Link className="font-medium text-rosa-lais" to="/cadastro">Cadastre-se</Link></p>
                   </form>}
                 </div>

@@ -86,6 +86,19 @@ export async function login(email: string, senha: string) {
   };
 }
 
+export async function loginWithGoogle(credential: string) {
+  const data = await authRequest<any>("/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+  const token = data.token ?? data.accessToken ?? data.data?.token;
+  if (!token) throw new Error("A API não retornou um token de acesso.");
+  return {
+    token: String(token),
+    user: data.user || data.data?.user ? normalizeUser(data) : null,
+  };
+}
+
 export async function getCurrentUser() {
   return unwrapUser(await authenticatedFetch<any>("/me"));
 }

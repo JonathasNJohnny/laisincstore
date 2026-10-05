@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { AUTH_TOKEN_KEY, getCurrentUser, login as loginRequest, type User } from "../services/users";
+import { AUTH_TOKEN_KEY, getCurrentUser, login as loginRequest, loginWithGoogle as loginWithGoogleRequest, type User } from "../services/users";
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, senha: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<User>;
   setUser: (user: User) => void;
@@ -40,7 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else await refreshUser();
   }, [refreshUser]);
 
-  return <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, setUser }}>{children}</AuthContext.Provider>;
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    const result = await loginWithGoogleRequest(credential);
+    localStorage.setItem(AUTH_TOKEN_KEY, result.token);
+    if (result.user) setUser(result.user);
+    else await refreshUser();
+  }, [refreshUser]);
+
+  return <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, logout, refreshUser, setUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -96,6 +96,11 @@ export interface ShippingQuote {
   deliveryTime: number;
 }
 
+export interface ShippingQuoteItem {
+  productId: number | string;
+  quantity: number;
+}
+
 interface RawShippingQuote {
   serviceId?: number | string;
   service_id?: number | string;
@@ -117,11 +122,17 @@ interface ShippingQuoteResponse {
 export async function getShippingQuote(
   destinationPostalCode: string,
   orderId?: number | string,
+  items?: ShippingQuoteItem[],
 ): Promise<ShippingQuote[]> {
+  const token = localStorage.getItem("laisinc_auth_token");
+  const payload = token
+    ? { destinationPostalCode, ...(orderId ? { orderId } : {}) }
+    : { destinationPostalCode, items: items ?? [] };
+
   const response = await integrationRequest<RawShippingQuote[] | ShippingQuoteResponse>("/api/shipping/quote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ destinationPostalCode, ...(orderId ? { orderId } : {}) }),
+    body: JSON.stringify(payload),
   });
 
   const quotes = Array.isArray(response)
