@@ -46,14 +46,10 @@ export function CategoryCard({
               loading="lazy"
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-roxo-profundo/80 via-roxo-profundo/15 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 p-3 text-left">
-            <h3 className="truncate text-sm font-semibold text-branco sm:text-base">
+          <div className="absolute inset-0 flex items-center justify-center p-3 text-center">
+            <h3 className="category-text-shadow truncate text-xs font-semibold text-branco sm:text-sm">
               {category.name}
             </h3>
-            <p className="text-xs text-branco/80">
-              {category.productCount} {category.productCount === 1 ? "produto" : "produtos"}
-            </p>
           </div>
         </div>
       </Link>

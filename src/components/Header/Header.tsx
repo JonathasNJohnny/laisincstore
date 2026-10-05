@@ -202,7 +202,7 @@ export function Header() {
                 )}
               </button>
               {isAccountOpen && (
-                <div className="absolute right-0 top-full z-[60] mt-3 w-[min(22rem,calc(100vw-2rem))] animate-[slideUp_180ms_ease-out] rounded-2xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-900 p-5 shadow-xl text-grafite-arroxeado dark:text-zinc-100">
+                <div className="fixed left-4 right-4 top-[4.75rem] z-[60] w-auto animate-[slideUp_180ms_ease-out] rounded-2xl border border-cinza-quente dark:border-zinc-700 bg-branco dark:bg-zinc-900 p-5 shadow-xl text-grafite-arroxeado dark:text-zinc-100 lg:absolute lg:left-auto lg:right-0 lg:top-full lg:mt-3 lg:w-[min(22rem,calc(100vw-2rem))]">
                   <div className="flex items-center justify-between border-b border-cinza-quente/60 dark:border-zinc-800 pb-3 mb-4">
                     <span className="text-xs font-semibold uppercase tracking-wider text-cinza-amarronzado dark:text-zinc-400">Minha Conta</span>
                     <button

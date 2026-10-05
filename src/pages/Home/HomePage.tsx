@@ -18,16 +18,14 @@ export function HomePage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [heroBanners, setHeroBanners] = useState<HeroBanner[]>([]);
   const [categoryPage, setCategoryPage] = useState(0);
-  const [categoryPageSize, setCategoryPageSize] = useState(4);
+  const [categoryPageSize, setCategoryPageSize] = useState(3);
   const [categoryDirection, setCategoryDirection] = useState<
     "next" | "previous"
   >("next");
 
   useEffect(() => {
     const updatePageSize = () => {
-      setCategoryPageSize(
-        window.matchMedia("(min-width: 1024px)").matches ? 8 : 4,
-      );
+      setCategoryPageSize(3);
       setCategoryDirection("next");
       setCategoryPage(0);
     };
@@ -168,7 +166,7 @@ export function HomePage() {
               }
             >
               <div
-                className="grid grid-cols-4 gap-3 lg:grid-cols-8 lg:gap-4"
+                className="grid grid-cols-3 gap-3 lg:gap-6"
                 role="list"
               >
                 {visibleCategories.map((category) => (
