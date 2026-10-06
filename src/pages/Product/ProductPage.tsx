@@ -9,6 +9,7 @@ import {
   Truck,
   Shield,
   Star,
+  Play,
 } from "lucide-react";
 import { Badge } from "../../components/Badge/Badge";
 import { Button } from "../../components/Button/Button";
@@ -21,10 +22,17 @@ import { getImageUrl, getProductBySlug } from "../../services/api";
 import { normalizeApiProduct } from "../../components/ProductList/ProductList";
 import { slugify } from "../../utils/slugify";
 import type { Product } from "../../types";
+import { ProductReviews } from "../../components/ProductReviews/ProductReviews";
+import { useFavorites } from "../../contexts/FavoritesContext";
+
+function isVideoMedia(url: string) {
+  return /\.(mp4|webm|mov|m4v|ogv)(?:$|[?#])/i.test(url);
+}
 
 export function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
   const { addItem, isInCart, getItemQuantity } = useCart();
+  const { favoriteIds, toggleFavorite } = useFavorites();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [originalDescription, setOriginalDescription] = useState("");
@@ -34,6 +42,10 @@ export function ProductPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [reviewSummary, setReviewSummary] = useState({
+    reviewCount: 0,
+    averageRating: 0,
+  });
 
   useEffect(() => {
     let active = true;
@@ -115,6 +127,8 @@ export function ProductPage() {
     product.images && product.images.length > 0
       ? product.images
       : [product.image];
+  const selectedMediaUrl = getImageUrl(images[selectedImage]);
+  const selectedMediaIsVideo = isVideoMedia(selectedMediaUrl);
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
   const discountPercentage = hasDiscount
     ? Math.round(
@@ -122,6 +136,7 @@ export function ProductPage() {
       )
     : 0;
   const inCart = isInCart(product.id);
+  const isFavorite = favoriteIds.has(product.id);
   const cartQuantity = getItemQuantity(product.id);
   const isOutOfStock = product.stock <= 0;
 
@@ -203,27 +218,60 @@ export function ProductPage() {
       </nav>
 
       <section className="container py-8 lg:py-12">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
           <div className="space-y-4">
-            <div className="relative aspect-square w-[90%] rounded-2xl overflow-hidden bg-cinza-quente/50">
-              <button
-                type="button"
-                onClick={() => setIsZoomed(true)}
-                className="absolute inset-0 z-0 h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
-                aria-label="Ampliar imagem"
-              >
-                <img
-                  src={getImageUrl(images[selectedImage])}
-                  alt={product.name}
-                  crossOrigin="anonymous"
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                />
-              </button>
+            <div
+              className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-2xl bg-cinza-quente/50"
+              onClick={() => setIsZoomed(true)}
+            >
+              {selectedMediaIsVideo ? (
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed(true)}
+                  className="absolute inset-0 z-0 h-full w-full cursor-pointer bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
+                  aria-label={`Abrir vídeo de ${product.name}`}
+                >
+                  <video
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-contain"
+                    aria-hidden="true"
+                  >
+                    <source src={selectedMediaUrl} />
+                  </video>
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-branco transition-colors hover:bg-black/35">
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-branco/90 text-roxo-profundo shadow-lg">
+                      <Play
+                        className="ml-1 h-8 w-8 fill-current"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed(true)}
+                  className="absolute inset-0 z-0 h-full w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais focus-visible:ring-offset-2"
+                  aria-label="Ampliar imagem"
+                >
+                  <img
+                    src={selectedMediaUrl}
+                    alt={product.name}
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                </button>
+              )}
               {images.length > 1 && (
                 <>
                   <button
                     type="button"
-                    onClick={() => handleImageChange(-1)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleImageChange(-1);
+                    }}
                     className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-branco/85 p-2 text-roxo-profundo shadow-md transition hover:bg-branco focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
                     aria-label="Imagem anterior"
                   >
@@ -231,7 +279,10 @@ export function ProductPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleImageChange(1)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleImageChange(1);
+                    }}
                     className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-branco/85 p-2 text-roxo-profundo shadow-md transition hover:bg-branco focus:outline-none focus-visible:ring-2 focus-visible:ring-rosa-lais"
                     aria-label="Próxima imagem"
                   >
@@ -252,7 +303,7 @@ export function ProductPage() {
                 </div>
               )}
               {isOutOfStock && (
-                <div className="absolute inset-0 bg-roxo-profundo/70 flex items-center justify-center">
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-roxo-profundo/70">
                   <span className="text-branco font-semibold text-lg px-6 py-3 bg-roxo-profundo rounded-xl">
                     Esgotado
                   </span>
@@ -268,22 +319,44 @@ export function ProductPage() {
               {images.map((img, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedImage(idx)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                  onClick={() => {
+                    setSelectedImage(idx);
+                    setIsZoomed(true);
+                  }}
+                  className={`relative flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 transition-all sm:h-28 sm:w-28 ${
                     idx === selectedImage
                       ? "border-rosa-lais shadow-lg"
                       : "border-transparent hover:border-cinza-quente"
                   }`}
-                  aria-label={`Ver imagem ${idx + 1}`}
+                  aria-label={`${isVideoMedia(getImageUrl(img)) ? "Abrir vídeo" : "Ampliar imagem"} ${idx + 1}`}
                   aria-current={idx === selectedImage ? "true" : "false"}
                   role="listitem"
                 >
-                  <img
-                    src={getImageUrl(img)}
-                    alt=""
-                    crossOrigin="anonymous"
-                    className="w-full h-full object-cover"
-                  />
+                  {isVideoMedia(getImageUrl(img)) ? (
+                    <>
+                      <video
+                        src={getImageUrl(img)}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="h-full w-full object-cover"
+                        aria-hidden="true"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-roxo-profundo/25 text-branco">
+                        <Play
+                          className="h-8 w-8 fill-current drop-shadow-md"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </>
+                  ) : (
+                    <img
+                      src={getImageUrl(img)}
+                      alt=""
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -328,12 +401,16 @@ export function ProductPage() {
               </Button>
               <Button
                 variant="ghost"
+                onClick={() => void toggleFavorite(product.id, product)}
                 aria-label={
-                  inCart ? "Remover dos favoritos" : "Adicionar aos favoritos"
+                  isFavorite
+                    ? "Remover dos favoritos"
+                    : "Adicionar aos favoritos"
                 }
+                aria-pressed={isFavorite}
               >
                 <Heart
-                  className={`w-5 h-5 ${inCart ? "fill-rosa-lais text-rosa-lais" : ""}`}
+                  className={`w-5 h-5 ${isFavorite ? "fill-[#e74367] text-[#e74367]" : ""}`}
                   aria-hidden="true"
                 />
               </Button>
@@ -350,28 +427,17 @@ export function ProductPage() {
               </h1>
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-1">
-                  <Star
-                    className="w-5 h-5 fill-dourado-suave text-dourado-suave"
-                    aria-hidden="true"
-                  />
-                  <Star
-                    className="w-5 h-5 fill-dourado-suave text-dourado-suave"
-                    aria-hidden="true"
-                  />
-                  <Star
-                    className="w-5 h-5 fill-dourado-suave text-dourado-suave"
-                    aria-hidden="true"
-                  />
-                  <Star
-                    className="w-5 h-5 fill-dourado-suave text-dourado-suave"
-                    aria-hidden="true"
-                  />
-                  <Star
-                    className="w-5 h-5 text-cinza-quete"
-                    aria-hidden="true"
-                  />
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <Star
+                      key={index}
+                      className={`w-5 h-5 ${index < Math.round(reviewSummary.averageRating) ? "fill-dourado-suave text-dourado-suave" : "text-cinza-quente"}`}
+                      aria-hidden="true"
+                    />
+                  ))}
                   <span className="text-sm text-cinza-amarronzado ml-2">
-                    (12 avaliações)
+                    {reviewSummary.reviewCount === 0
+                      ? "Sem avaliações"
+                      : `(${reviewSummary.reviewCount} ${reviewSummary.reviewCount === 1 ? "avaliação" : "avaliações"})`}
                   </span>
                 </div>
               </div>
@@ -515,6 +581,11 @@ export function ProductPage() {
         </div>
       </section>
 
+      <ProductReviews
+        productId={product.id}
+        onSummaryChange={setReviewSummary}
+      />
+
       {relatedProducts.length > 0 && (
         <section
           className="container py-12 lg:py-16"
@@ -562,12 +633,26 @@ export function ProductPage() {
         >
           <ChevronLeft className="w-8 h-8" aria-hidden="true" />
         </button>
-        <img
-          src={getImageUrl(images[selectedImage])}
-          alt={product.name}
-          crossOrigin="anonymous"
-          className="max-h-[80vh] max-w-[80vw] object-contain"
-        />
+        {selectedMediaIsVideo ? (
+          <video
+            key={selectedMediaUrl}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className="max-h-[85vh] w-[min(92vw,1100px)] object-contain"
+          >
+            <source src={selectedMediaUrl} />
+            Seu navegador não suporta a reprodução de vídeos.
+          </video>
+        ) : (
+          <img
+            src={selectedMediaUrl}
+            alt={product.name}
+            crossOrigin="anonymous"
+            className="max-h-[85vh] max-w-[92vw] object-contain"
+          />
+        )}
         <button
           onClick={() => handleImageChange(1)}
           className="absolute right-6 p-3 rounded-full bg-branco/10 text-branco hover:bg-branco/20 transition-colors"

@@ -10,6 +10,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { AuthApiError } from "../../services/users";
 import type { NavItem } from "../../types";
 import logo from "../../assets/logo.png";
+import { OPEN_LOGIN_MENU_EVENT } from "../../utils/toast";
 
 const navItems: NavItem[] = [
   { label: "Início", href: "/" },
@@ -96,6 +97,12 @@ export function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isAccountOpen]);
+
+  useEffect(() => {
+    const openLoginMenu = () => setIsAccountOpen(true);
+    window.addEventListener(OPEN_LOGIN_MENU_EVENT, openLoginMenu);
+    return () => window.removeEventListener(OPEN_LOGIN_MENU_EVENT, openLoginMenu);
+  }, []);
 
   const itemCount = getItemCount();
   const visibleNavItems = user?.admin === true
@@ -199,12 +206,13 @@ export function Header() {
               >
                 <User className="w-5 h-5 lg:w-6 lg:h-6" aria-hidden="true" />
               </button>
-              <button
+              <Link
+                to="/favoritos"
                 className="relative p-2 rounded-xl text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors lg:p-2.5"
                 aria-label="Favoritos"
               >
                 <Heart className="w-5 h-5 lg:w-6 lg:h-6" aria-hidden="true" />
-              </button>
+              </Link>
               <button
                 onClick={toggleCart}
                 className="relative p-2 rounded-xl text-grafite-arroxeado dark:text-zinc-200 hover:bg-cinza-quente/50 dark:hover:bg-zinc-800 transition-colors lg:p-2.5"

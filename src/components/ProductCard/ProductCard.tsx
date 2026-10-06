@@ -6,6 +6,7 @@ import { Button } from "../Button/Button";
 import { QuantitySelector } from "../QuantitySelector/QuantitySelector";
 import { formatCurrency } from "../../utils/currency";
 import type { Product } from "../../types";
+import { useFavorites } from "../../contexts/FavoritesContext";
 
 interface ProductCardProps {
   product: Product;
@@ -23,10 +24,12 @@ export function ProductCard({
   showAddToCart = true,
   onAddToCart,
   onToggleFavorite,
-  isFavorite = false,
+  isFavorite,
   className = "",
 }: ProductCardProps) {
+  const { favoriteIds, toggleFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(1);
+  const productIsFavorite = isFavorite ?? favoriteIds.has(product.id);
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
   const discountPercentage = hasDiscount
     ? Math.round(
@@ -65,7 +68,7 @@ export function ProductCard({
                 {product.category}
               </p>
             </div>
-            <div className="mt-2 flex flex-col items-start gap-0 sm:flex-row sm:items-center sm:gap-2">
+            <div className="mt-2 flex flex-col items-start gap-0 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-0.5">
               <span className="text-sm font-bold text-rosa-lais sm:text-base">
                 {formatCurrency(product.price)}
               </span>
@@ -77,6 +80,18 @@ export function ProductCard({
             </div>
           </div>
         </Link>
+        <button
+          type="button"
+          onClick={() => {
+            if (onToggleFavorite) onToggleFavorite(product);
+            else void toggleFavorite(product.id, product);
+          }}
+          className={`flex h-10 w-full shrink-0 items-center justify-center rounded-lg border text-sm transition-colors sm:h-11 sm:w-11 sm:rounded-xl ${productIsFavorite ? "border-[#e74367] bg-[#e74367]/10 text-[#e74367]" : "border-cinza-quente text-grafite-arroxeado hover:border-[#e74367] hover:text-[#e74367]"}`}
+          aria-label={productIsFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          aria-pressed={productIsFavorite}
+        >
+          <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${productIsFavorite ? "fill-current" : ""}`} aria-hidden="true" />
+        </button>
         {onAddToCart && !isOutOfStock && (
           <button
             type="button"
@@ -124,25 +139,26 @@ export function ProductCard({
           </div>
         )}
 
-        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 translate-x-2 group-hover:translate-x-0">
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
           <button
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onToggleFavorite?.(product);
+              if (onToggleFavorite) onToggleFavorite(product);
+              else void toggleFavorite(product.id, product);
             }}
             className={`p-2 rounded-full bg-branco/90 backdrop-blur-sm shadow-md transition-all ${
-              isFavorite
-                ? "text-rosa-lais"
-                : "text-grafite-arroxeado hover:text-rosa-lais"
+              productIsFavorite
+                ? "bg-[#fff0f3] text-[#e74367]"
+                : "text-grafite-arroxeado hover:text-[#e74367]"
             }`}
             aria-label={
-              isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"
+              productIsFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"
             }
-            aria-pressed={isFavorite}
+            aria-pressed={productIsFavorite}
           >
             <Heart
-              className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`}
+              className={`w-5 h-5 ${productIsFavorite ? "fill-current" : ""}`}
               aria-hidden="true"
             />
           </button>
@@ -178,7 +194,7 @@ export function ProductCard({
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-0 sm:flex-row sm:items-center sm:gap-2">
+        <div className="flex flex-col items-start gap-0 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-0.5">
           <span className="font-bold text-lg text-rosa-lais">
             {formatCurrency(product.price)}
           </span>

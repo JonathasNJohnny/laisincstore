@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { FavoritesProvider } from './contexts/FavoritesContext'
 import { router } from './routes'
 import './index.css'
 
@@ -13,9 +14,11 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
         <AuthProvider>
-          <CartProvider>
-            <RouterProvider router={router} />
-          </CartProvider>
+          <FavoritesProvider>
+            <CartProvider>
+              <RouterProvider router={router} />
+            </CartProvider>
+          </FavoritesProvider>
         </AuthProvider>
       </GoogleOAuthProvider>
     </ThemeProvider>

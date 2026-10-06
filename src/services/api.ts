@@ -377,6 +377,72 @@ export function deleteCoupon(id: number | string) { return integrationRequest<vo
 export interface CouponPreview { couponId: number | string; code: string; totalDiscount: string | number; eligibleSubtotal: string | number; finalAmount: string | number; }
 export function validateCoupon(code: string) { return integrationRequest<CouponPreview>("/api/coupons/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }); }
 
+export interface FavoriteProduct {
+  id: number | string;
+  productId: number | string;
+  createdAt: string;
+  name: string;
+  slug: string;
+  price: string | number;
+  sale?: string | number | null;
+  finalPrice?: string | number | null;
+  imageUrl?: string | null;
+  active?: number | boolean;
+}
+
+export function getFavorites() {
+  return integrationRequest<{ status: string; favorites: FavoriteProduct[] }>("/api/favorites");
+}
+
+export function addFavorite(productId: number | string) {
+  return integrationRequest<{ status: string; favorite: FavoriteProduct }>(`/api/favorites/${encodeURIComponent(productId)}`, { method: "POST" });
+}
+
+export function removeFavorite(productId: number | string) {
+  return integrationRequest<void>(`/api/favorites/${encodeURIComponent(productId)}`, { method: "DELETE" });
+}
+
+export interface ReviewMedia {
+  id: number | string;
+  url: string;
+  mediaType: "image" | "video";
+  position: number;
+}
+
+export interface ProductReview {
+  id: number | string;
+  productId: number | string;
+  userId: number | string;
+  userName: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  media: ReviewMedia[];
+}
+
+export interface ProductReviewsResponse {
+  status: string;
+  summary: { reviewCount: number; averageRating: number };
+  reviews: ProductReview[];
+}
+
+export function getProductReviews(productId: number | string) {
+  return integrationRequest<ProductReviewsResponse>(`/api/products/${encodeURIComponent(productId)}/reviews`);
+}
+
+export function createProductReview(productId: number | string, data: FormData) {
+  return integrationRequest<{ status: string; review: ProductReview }>(`/api/products/${encodeURIComponent(productId)}/reviews`, { method: "POST", body: data });
+}
+
+export function updateProductReview(productId: number | string, reviewId: number | string, data: FormData) {
+  return integrationRequest<{ status: string; review: ProductReview }>(`/api/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`, { method: "PATCH", body: data });
+}
+
+export function deleteProductReview(productId: number | string, reviewId: number | string) {
+  return integrationRequest<void>(`/api/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`, { method: "DELETE" });
+}
+
 export function createOrder(data: OrderCheckoutData) {
   return integrationRequest<{ status: string; order: Order }>("/api/orders", {
     method: "POST",

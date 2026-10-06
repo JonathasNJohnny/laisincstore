@@ -34,6 +34,7 @@ import {
   initMercadoPago,
 } from "@mercadopago/sdk-react";
 import { QRCodeSVG } from "qrcode.react";
+import { openLoginMenu, toast } from "../../utils/toast";
 
 const mercadoPagoPublicKey = import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY;
 
@@ -578,7 +579,8 @@ export function CheckoutPage() {
     }
 
     if (!user) {
-      setPaymentError("Entre na sua conta para finalizar a compra.");
+      toast.warn("Faça login para finalizar sua compra.");
+      openLoginMenu();
       return;
     }
     if (!order && (!selectedShipping || destinationPostalCode.length !== 8)) {
