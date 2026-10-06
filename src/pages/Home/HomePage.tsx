@@ -25,7 +25,7 @@ export function HomePage() {
 
   useEffect(() => {
     const updatePageSize = () => {
-      setCategoryPageSize(3);
+      setCategoryPageSize(window.innerWidth >= 1024 ? 6 : 3);
       setCategoryDirection("next");
       setCategoryPage(0);
     };
@@ -166,7 +166,7 @@ export function HomePage() {
               }
             >
               <div
-                className="grid grid-cols-3 gap-3 lg:gap-6"
+                className="grid grid-cols-3 gap-3 lg:grid-cols-6 lg:gap-6"
                 role="list"
               >
                 {visibleCategories.map((category) => (

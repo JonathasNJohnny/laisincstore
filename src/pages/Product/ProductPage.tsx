@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
+  Check,
   X,
   Heart,
   Share2,
@@ -42,6 +43,7 @@ export function ProductPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
   const [reviewSummary, setReviewSummary] = useState({
     reviewCount: 0,
     averageRating: 0,
@@ -145,6 +147,26 @@ export function ProductPage() {
       addItem(product, quantity);
       setQuantity(1);
     }
+  };
+
+  const handleShare = async () => {
+    const pageUrl = window.location.href;
+
+    try {
+      await navigator.clipboard.writeText(pageUrl);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = pageUrl;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      textArea.remove();
+    }
+
+    setIsLinkCopied(true);
+    window.setTimeout(() => setIsLinkCopied(false), 2000);
   };
 
   const handleImageChange = (direction: number) => {
@@ -391,30 +413,6 @@ export function ProductPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                className="ml-auto"
-                aria-label="Compartilhar produto"
-              >
-                <Share2 className="w-5 h-5" aria-hidden="true" />
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => void toggleFavorite(product.id, product)}
-                aria-label={
-                  isFavorite
-                    ? "Remover dos favoritos"
-                    : "Adicionar aos favoritos"
-                }
-                aria-pressed={isFavorite}
-              >
-                <Heart
-                  className={`w-5 h-5 ${isFavorite ? "fill-[#e74367] text-[#e74367]" : ""}`}
-                  aria-hidden="true"
-                />
-              </Button>
-            </div>
           </div>
 
           <div className="space-y-6">
@@ -443,20 +441,30 @@ export function ProductPage() {
               </div>
             </div>
 
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-3xl font-bold text-rosa-lais">
-                {formatCurrency(product.price)}
-              </span>
-              {hasDiscount && (
-                <span className="text-xl text-cinza-amarronzado line-through">
-                  {formatCurrency(product.oldPrice!)}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="text-3xl font-bold text-rosa-lais">
+                  {formatCurrency(product.price)}
                 </span>
-              )}
-              {hasDiscount && (
-                <span className="bg-rosa-lais/10 text-rosa-lais px-3 py-1 rounded-full text-sm font-medium">
-                  Economize {formatCurrency(product.oldPrice! - product.price)}
-                </span>
-              )}
+                {hasDiscount && (
+                  <span className="text-xl text-cinza-amarronzado line-through">
+                    {formatCurrency(product.oldPrice!)}
+                  </span>
+                )}
+                {hasDiscount && (
+                  <span className="bg-rosa-lais/10 text-rosa-lais px-3 py-1 rounded-full text-sm font-medium">
+                    Economize {formatCurrency(product.oldPrice! - product.price)}
+                  </span>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button variant="ghost" onClick={() => void handleShare()} aria-label={isLinkCopied ? "Link copiado" : "Copiar link do produto"} title={isLinkCopied ? "Link copiado" : "Copiar link do produto"}>
+                  {isLinkCopied ? <Check className="h-5 w-5 text-emerald-600" aria-hidden="true" /> : <Share2 className="h-5 w-5" aria-hidden="true" />}
+                </Button>
+                <Button variant="ghost" onClick={() => void toggleFavorite(product.id, product)} aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"} aria-pressed={isFavorite}>
+                  <Heart className={`h-5 w-5 ${isFavorite ? "fill-[#e74367] text-[#e74367]" : ""}`} aria-hidden="true" />
+                </Button>
+              </div>
             </div>
 
             <p className="text-cinza-amarronzado leading-relaxed">
