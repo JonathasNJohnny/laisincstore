@@ -22,6 +22,7 @@ export function HomePage() {
   const [categoryDirection, setCategoryDirection] = useState<
     "next" | "previous"
   >("next");
+  const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     const updatePageSize = () => {
@@ -166,15 +167,29 @@ export function HomePage() {
               }
             >
               <div
-                className="grid grid-cols-3 gap-3 lg:grid-cols-6 lg:gap-6"
+                className="flex gap-3 lg:gap-6"
                 role="list"
               >
                 {visibleCategories.map((category) => (
-                  <CategoryCard
+                  <div
                     key={category.id}
-                    category={category}
-                    variant="compact"
-                  />
+                    role="listitem"
+                    className="min-w-0 flex-1"
+                    style={{
+                      flexGrow: category.id === hoveredCategoryId ? 2.5 : 1,
+                      transition: "flex-grow 300ms ease-in-out",
+                    }}
+                    onMouseEnter={() => setHoveredCategoryId(category.id)}
+                    onMouseLeave={() => setHoveredCategoryId(null)}
+                    onFocus={() => setHoveredCategoryId(category.id)}
+                    onBlur={() => setHoveredCategoryId(null)}
+                  >
+                    <CategoryCard
+                      category={category}
+                      variant="compact"
+                      className="w-full"
+                    />
+                  </div>
                 ))}
               </div>
             </div>

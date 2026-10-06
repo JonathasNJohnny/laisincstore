@@ -35,7 +35,7 @@ export function CategoryCard({
         className={`group relative block overflow-hidden rounded-2xl border border-cinza-quente bg-branco shadow-sm ${className}`}
         aria-label={`Ver categoria ${category.name}, ${category.productCount} produtos`}
       >
-        <div className="relative aspect-[2/1] overflow-hidden bg-cinza-quente/50">
+        <div className="relative h-16 overflow-hidden bg-cinza-quente/50 lg:h-20">
           {images.map((image, index) => (
             <img
               key={`${image}-${index}`}
